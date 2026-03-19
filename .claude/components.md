@@ -5,7 +5,7 @@
 - **Style:** `base-maia`
 - **Icon library:** Tabler (`@tabler/icons-react`)
 - **React Server Components:** enabled (`rsc: true`)
-- All 55 base components are installed in `packages/ui/src/components/`
+- Base components are installed in `packages/ui/src/components/`
 
 ### Adding Components
 

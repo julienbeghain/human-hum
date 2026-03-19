@@ -1,6 +1,6 @@
 # Human Hum
 
-A shadcn/ui monorepo — Next.js 16 app with a shared React component library.
+A personal music scrobbling platform — records listening history and surfaces insights. Built as a pnpm monorepo with Next.js 16, Drizzle ORM, and Neon Postgres.
 
 ## Commands
 
@@ -10,24 +10,19 @@ A shadcn/ui monorepo — Next.js 16 app with a shared React component library.
 - **Format:** `pnpm format`
 - **Typecheck:** `pnpm typecheck`
 
-## Monorepo Structure
-
-| Package | Path | Purpose |
-|---------|------|---------|
-| `apps/web` | Next.js 16 app (React 19, Turbopack) | Consumer app |
-| `packages/ui` | Shared component library (shadcn/ui) | Reusable UI |
-| `packages/eslint-config` | Shared ESLint flat configs | Linting |
-| `packages/typescript-config` | Shared TS configs | Type checking |
-
 ## Key Conventions
 
 - **Package manager:** pnpm (v9, workspaces)
 - **Import UI components:** `import { X } from "@workspace/ui/components/x"`
+- **Import DB schema/client:** `import { db, schema } from "@workspace/db"`
 - **Add shadcn components:** `pnpm dlx shadcn@latest add <component> -c packages/ui`
 - **Utility function:** `cn()` from `@workspace/ui/lib/utils`
 
 ## Guidelines
 
+- [Git Workflow](.claude/git-workflow.md)
 - [Code Style & Formatting](.claude/code-style.md)
 - [Component & UI Patterns](.claude/components.md)
 - [Architecture](.claude/architecture.md)
+- [Deep Module Principles](.claude/deep-modules.md)
+- [Domain Language](UBIQUITOUS_LANGUAGE.md)

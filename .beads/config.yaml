@@ -13,7 +13,7 @@
 # no-db: false
 
 # Enable JSON output by default
-# json: false
+json: true
 
 # Feedback title formatting for mutating commands (create/update/close/dep/edit)
 # 0 = hide titles, N > 0 = truncate to N characters
@@ -26,7 +26,7 @@
 # Export events (audit trail) to .beads/events.jsonl on each flush/sync
 # When enabled, new events are appended incrementally using a high-water mark.
 # Use 'bd export --events' to trigger manually regardless of this setting.
-# events-export: false
+events-export: true
 
 # Multi-repo configuration (experimental - bd-307)
 # Allows hydrating from multiple repositories and routing writes to the correct database

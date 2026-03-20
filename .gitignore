@@ -34,3 +34,7 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

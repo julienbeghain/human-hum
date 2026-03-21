@@ -1,0 +1,21 @@
+## Iteration 1: packages/db setup (human-hum-1fo)
+
+- Created packages/db with Drizzle ORM + Neon serverless driver
+- Star schema: artists, albums, tracks (dimension tables) + scrobbles (fact table)
+- Unique constraints: artists(name, mbid), albums(name, artist_id, mbid), tracks(name, artist_id, mbid), scrobbles(track_id, listened_at)
+- Source enum: lastfm, spotify, tidal
+- Exports: db client, schema, Database type, and createDb factory
+- Added DATABASE_URL to turbo.json globalEnv to suppress lint warnings
+- Used generatedAlwaysAsIdentity() for auto-incrementing PKs (Postgres identity columns)
+- Note: migration not run yet — requires DATABASE_URL env var pointing to Neon
+
+## Iteration 2: LastFM single-page import script (human-hum-4uh)
+
+- Created apps/import with tsx runner for LastFM import
+- Fetches one page (50 tracks) from user.getRecentTracks API
+- Upserts artists, albums, tracks with select-then-insert-then-refetch pattern for race safety
+- Inserts scrobbles with onConflictDoNothing for dedup (unique on track_id + listened_at)
+- Skips "now playing" entries (no timestamp)
+- Uses `drizzle-orm` eq/and for type-safe WHERE conditions
+- Env vars: LASTFM_API_KEY, LASTFM_USER, DATABASE_URL (added to turbo.json globalEnv)
+- Run with: `pnpm --filter import run import`

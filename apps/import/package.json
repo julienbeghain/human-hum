@@ -1,0 +1,23 @@
+{
+  "name": "import",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "import": "tsx src/lastfm.ts",
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "^0.44.0"
+  },
+  "devDependencies": {
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "eslint": "^9.39.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
+  }
+}

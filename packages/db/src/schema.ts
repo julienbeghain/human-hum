@@ -1,34 +1,36 @@
 import {
   index,
   integer,
-  pgEnum,
-  pgTable,
   text,
   timestamp,
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { listenSchema, timestampsWithoutUpdate } from "./shared.js";
+
 // --- Enums ---
 
-export const sourceEnum = pgEnum("source", ["lastfm", "spotify", "tidal"]);
+export const sourceEnum = listenSchema.enum("source", [
+  "lastfm",
+  "spotify",
+  "tidal",
+]);
 
 // --- Dimension tables ---
 
-export const artists = pgTable(
+export const artists = listenSchema.table(
   "artists",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     name: text().notNull(),
     mbid: varchar({ length: 36 }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    ...timestampsWithoutUpdate,
   },
   (t) => [uniqueIndex("artists_name_mbid_idx").on(t.name, t.mbid)],
 );
 
-export const albums = pgTable(
+export const albums = listenSchema.table(
   "albums",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -37,9 +39,7 @@ export const albums = pgTable(
     artistId: integer("artist_id")
       .notNull()
       .references(() => artists.id),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    ...timestampsWithoutUpdate,
   },
   (t) => [
     uniqueIndex("albums_name_artist_id_mbid_idx").on(
@@ -51,7 +51,7 @@ export const albums = pgTable(
   ],
 );
 
-export const tracks = pgTable(
+export const tracks = listenSchema.table(
   "tracks",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -61,9 +61,7 @@ export const tracks = pgTable(
       .notNull()
       .references(() => artists.id),
     albumId: integer("album_id").references(() => albums.id),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    ...timestampsWithoutUpdate,
   },
   (t) => [
     uniqueIndex("tracks_name_artist_id_mbid_idx").on(
@@ -78,7 +76,7 @@ export const tracks = pgTable(
 
 // --- Fact table ---
 
-export const scrobbles = pgTable(
+export const scrobbles = listenSchema.table(
   "scrobbles",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -87,9 +85,7 @@ export const scrobbles = pgTable(
       .references(() => tracks.id),
     listenedAt: timestamp("listened_at", { withTimezone: true }).notNull(),
     source: sourceEnum().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    ...timestampsWithoutUpdate,
   },
   (t) => [
     uniqueIndex("scrobbles_track_id_listened_at_idx").on(

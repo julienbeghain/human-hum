@@ -13,16 +13,18 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.0",
-    "drizzle-orm": "^0.44.0"
+    "@neondatabase/serverless": "^1.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.4.1",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.0",
+    "drizzle-orm": "^0.44.7",
     "eslint": "^9.39.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   },
   "exports": {
     ".": "./src/index.ts",

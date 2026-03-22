@@ -1,7 +1,4 @@
-import { createDb, schema } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
-
-const { artists, albums, tracks, scrobbles } = schema;
+import { createDb, recordListen } from "@workspace/db";
 
 // --- Config ---
 
@@ -40,118 +37,6 @@ interface LastfmResponse {
   };
 }
 
-// --- Helpers ---
-
-function mbidOrNull(mbid: string): string | null {
-  return mbid && mbid.length > 0 ? mbid : null;
-}
-
-async function upsertArtist(
-  name: string,
-  mbid: string | null,
-): Promise<number> {
-  const conditions = [eq(artists.name, name)];
-  if (mbid) {
-    conditions.push(eq(artists.mbid, mbid));
-  }
-
-  const existing = await db
-    .select({ id: artists.id })
-    .from(artists)
-    .where(and(...conditions))
-    .limit(1);
-
-  if (existing[0]) return existing[0].id;
-
-  const inserted = await db
-    .insert(artists)
-    .values({ name, mbid })
-    .onConflictDoNothing()
-    .returning({ id: artists.id });
-
-  if (inserted[0]) return inserted[0].id;
-
-  // Race condition: re-query
-  const refetch = await db
-    .select({ id: artists.id })
-    .from(artists)
-    .where(and(...conditions))
-    .limit(1);
-
-  return refetch[0]!.id;
-}
-
-async function upsertAlbum(
-  name: string,
-  mbid: string | null,
-  artistId: number,
-): Promise<number> {
-  const conditions = [eq(albums.name, name), eq(albums.artistId, artistId)];
-  if (mbid) {
-    conditions.push(eq(albums.mbid, mbid));
-  }
-
-  const existing = await db
-    .select({ id: albums.id })
-    .from(albums)
-    .where(and(...conditions))
-    .limit(1);
-
-  if (existing[0]) return existing[0].id;
-
-  const inserted = await db
-    .insert(albums)
-    .values({ name, mbid, artistId })
-    .onConflictDoNothing()
-    .returning({ id: albums.id });
-
-  if (inserted[0]) return inserted[0].id;
-
-  const refetch = await db
-    .select({ id: albums.id })
-    .from(albums)
-    .where(and(...conditions))
-    .limit(1);
-
-  return refetch[0]!.id;
-}
-
-async function upsertTrack(
-  name: string,
-  mbid: string | null,
-  artistId: number,
-  albumId: number | null,
-): Promise<number> {
-  const conditions = [eq(tracks.name, name), eq(tracks.artistId, artistId)];
-  if (mbid) {
-    conditions.push(eq(tracks.mbid, mbid));
-  }
-
-  const existing = await db
-    .select({ id: tracks.id })
-    .from(tracks)
-    .where(and(...conditions))
-    .limit(1);
-
-  if (existing[0]) return existing[0].id;
-
-  const inserted = await db
-    .insert(tracks)
-    .values({ name, mbid, artistId, albumId })
-    .onConflictDoNothing()
-    .returning({ id: tracks.id });
-
-  if (inserted[0]) return inserted[0].id;
-
-  const refetch = await db
-    .select({ id: tracks.id })
-    .from(tracks)
-    .where(and(...conditions))
-    .limit(1);
-
-  return refetch[0]!.id;
-}
-
 // --- Main ---
 
 async function importPage() {
@@ -182,7 +67,6 @@ async function importPage() {
   let skipped = 0;
 
   for (const t of pageTracks) {
-    // Skip now-playing tracks (they have no timestamp)
     if (t["@attr"]?.nowplaying === "true") {
       console.log(`  Skipping now-playing: ${t.artist["#text"]} - ${t.name}`);
       skipped++;
@@ -194,30 +78,21 @@ async function importPage() {
       continue;
     }
 
-    const artistMbid = mbidOrNull(t.artist.mbid);
-    const albumMbid = mbidOrNull(t.album.mbid);
-    const trackMbid = mbidOrNull(t.mbid);
-
-    const artistId = await upsertArtist(t.artist["#text"], artistMbid);
-
-    let albumId: number | null = null;
-    if (t.album["#text"]) {
-      albumId = await upsertAlbum(t.album["#text"], albumMbid, artistId);
-    }
-
-    const trackId = await upsertTrack(t.name, trackMbid, artistId, albumId);
-
-    const listenedAt = new Date(parseInt(t.date.uts, 10) * 1000);
-
-    await db
-      .insert(scrobbles)
-      .values({ trackId, listenedAt, source: "lastfm" })
-      .onConflictDoNothing();
+    const result = await recordListen(db, {
+      artist: { name: t.artist["#text"], mbid: t.artist.mbid || undefined },
+      album: t.album["#text"]
+        ? { name: t.album["#text"], mbid: t.album.mbid || undefined }
+        : undefined,
+      track: { name: t.name, mbid: t.mbid || undefined },
+      listenedAt: new Date(parseInt(t.date.uts, 10) * 1000),
+      source: "lastfm",
+    });
 
     console.log(
-      `  ${t.artist["#text"]} - ${t.name} @ ${listenedAt.toISOString()}`,
+      `  ${t.artist["#text"]} - ${t.name} @ ${result.wasNew ? "NEW" : "DUP"}`,
     );
-    imported++;
+    if (result.wasNew) imported++;
+    else skipped++;
   }
 
   console.log(

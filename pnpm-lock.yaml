@@ -35,9 +35,6 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../packages/db
-      drizzle-orm:
-        specifier: ^0.44.0
-        version: 0.44.7(@electric-sql/pglite@0.4.1)(@neondatabase/serverless@1.0.2)(@types/pg@8.20.0)
     devDependencies:
       '@workspace/eslint-config':
         specifier: workspace:*

@@ -15,6 +15,13 @@
       "when": 1774305066841,
       "tag": "0001_bizarre_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774305269405,
+      "tag": "0002_rare_thunderball",
+      "breakpoints": true
     }
   ]
 }

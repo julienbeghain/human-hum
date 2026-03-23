@@ -43,7 +43,6 @@ beforeAll(async () => {
       "name" text NOT NULL,
       "mbid" varchar(36),
       "artist_id" integer NOT NULL REFERENCES "listen"."artists"("id"),
-      "album_id" integer REFERENCES "listen"."albums"("id"),
       "created_at" timestamp with time zone DEFAULT now() NOT NULL,
       "deleted_at" timestamp with time zone
     );
@@ -52,6 +51,7 @@ beforeAll(async () => {
     CREATE TABLE "listen"."scrobbles" (
       "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
       "track_id" integer NOT NULL REFERENCES "listen"."tracks"("id"),
+      "album_id" integer REFERENCES "listen"."albums"("id"),
       "listened_at" timestamp with time zone NOT NULL,
       "source" "listen"."source" NOT NULL,
       "created_at" timestamp with time zone DEFAULT now() NOT NULL,

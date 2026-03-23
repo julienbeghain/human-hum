@@ -112,7 +112,7 @@ export async function recordListen(
     tracks,
     tracks.id,
     [eq(tracks.name, input.track.name), eq(tracks.artistId, artistId)],
-    { name: input.track.name, mbid: trackMbid, artistId, albumId },
+    { name: input.track.name, mbid: trackMbid, artistId },
   );
 
   // Insert scrobble
@@ -120,6 +120,7 @@ export async function recordListen(
     .insert(scrobbles)
     .values({
       trackId,
+      albumId,
       listenedAt: input.listenedAt,
       source: input.source,
     })

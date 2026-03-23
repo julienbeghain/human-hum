@@ -92,3 +92,13 @@
 - Recursive call to `importScrobbles` with `backfill: true` keeps the fallback logic in one place
 - CLI wrapper simplified: no flag = sync, `--backfill` = full history re-import
 - `backfill: backfill || undefined` pattern avoids passing `false` which would skip sync detection
+
+## Iteration 10: Backfill resume + completeness check (human-hum-3lm)
+
+- Resume interrupted backfill: auto-set `to = MIN(listened_at) + 1s` so only older pages are fetched
+- `getEarliestScrobbleTimestamp()` and `getScrobbleCount()` added to queries.ts using `min()` and `count()` aggregates
+- Completeness check: after backfill, calls `user.getInfo` API to get remote playcount, compares with local COUNT(*)
+- `CompletenessResult` type: { localCount, remotePlaycount, coveragePercent }
+- Coverage will never be 100% — LastFM counts "now playing" entries and deleted tracks in playcount
+- Backfill resume only activates when `to` is not explicitly set — explicit `to` takes precedence
+- `let { from, to } = options` — destructuring with `let` allows reassignment in the function body

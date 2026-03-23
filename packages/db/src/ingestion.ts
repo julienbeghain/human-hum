@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
-import type { PgTable } from "drizzle-orm/pg-core";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
-import type { Database } from "./index.js";
-import * as schema from "./schema.js";
+import type { Database } from "./index";
+import * as schema from "./schema";
 
 export type Source = (typeof schema.sourceEnum.enumValues)[number];
 
@@ -35,31 +35,32 @@ function normalizeMbid(mbid?: string): string | null {
  */
 async function resolveEntity(
   db: Database,
-  table: PgTable & { id: any },
+  table: PgTable,
+  idColumn: PgColumn,
   conditions: SQL[],
   values: Record<string, unknown>,
 ): Promise<number> {
   // 1. Try to find existing
-  const existing = await (db as any)
-    .select({ id: (table as any).id })
+  const existing = await db
+    .select({ id: idColumn })
     .from(table)
     .where(and(...conditions))
     .limit(1);
 
-  if (existing[0]) return existing[0].id;
+  if (existing[0]) return existing[0].id as number;
 
   // 2. Try to insert
-  const inserted = await (db as any)
+  const inserted = await db
     .insert(table)
     .values(values)
     .onConflictDoNothing()
-    .returning({ id: (table as any).id });
+    .returning({ id: idColumn });
 
-  if (inserted[0]) return inserted[0].id;
+  if (inserted[0]) return inserted[0].id as number;
 
   // 3. Race condition: another process inserted between our select and insert
-  const refetch = await (db as any)
-    .select({ id: (table as any).id })
+  const refetch = await db
+    .select({ id: idColumn })
     .from(table)
     .where(and(...conditions))
     .limit(1);
@@ -70,7 +71,7 @@ async function resolveEntity(
     );
   }
 
-  return refetch[0].id;
+  return refetch[0].id as number;
 }
 
 // --- Public API ---
@@ -86,7 +87,7 @@ export async function recordListen(
   const artistConditions: SQL[] = [eq(artists.name, input.artist.name)];
   if (artistMbid) artistConditions.push(eq(artists.mbid, artistMbid));
 
-  const artistId = await resolveEntity(db, artists, artistConditions, {
+  const artistId = await resolveEntity(db, artists, artists.id, artistConditions, {
     name: input.artist.name,
     mbid: artistMbid,
   });
@@ -101,7 +102,7 @@ export async function recordListen(
     ];
     if (albumMbid) albumConditions.push(eq(albums.mbid, albumMbid));
 
-    albumId = await resolveEntity(db, albums, albumConditions, {
+    albumId = await resolveEntity(db, albums, albums.id, albumConditions, {
       name: input.album.name,
       mbid: albumMbid,
       artistId,
@@ -116,7 +117,7 @@ export async function recordListen(
   ];
   if (trackMbid) trackConditions.push(eq(tracks.mbid, trackMbid));
 
-  const trackId = await resolveEntity(db, tracks, trackConditions, {
+  const trackId = await resolveEntity(db, tracks, tracks.id, trackConditions, {
     name: input.track.name,
     mbid: trackMbid,
     artistId,
@@ -124,7 +125,7 @@ export async function recordListen(
   });
 
   // Insert scrobble
-  const inserted = await (db as any)
+  const inserted = await db
     .insert(scrobbles)
     .values({
       trackId,
@@ -135,20 +136,25 @@ export async function recordListen(
     .returning({ id: scrobbles.id });
 
   const wasNew = inserted.length > 0;
-  const scrobbleId = wasNew
-    ? inserted[0].id
-    : (
-        await (db as any)
-          .select({ id: scrobbles.id })
-          .from(scrobbles)
-          .where(
-            and(
-              eq(scrobbles.trackId, trackId),
-              eq(scrobbles.listenedAt, input.listenedAt),
-            ),
-          )
-          .limit(1)
-      )[0].id;
+  let scrobbleId: number;
+  if (wasNew) {
+    scrobbleId = inserted[0]!.id;
+  } else {
+    const existing = await db
+      .select({ id: scrobbles.id })
+      .from(scrobbles)
+      .where(
+        and(
+          eq(scrobbles.trackId, trackId),
+          eq(scrobbles.listenedAt, input.listenedAt),
+        ),
+      )
+      .limit(1);
+    if (!existing[0]) {
+      throw new Error("Scrobble resolution failed: duplicate detected but not found");
+    }
+    scrobbleId = existing[0].id;
+  }
 
   return { scrobbleId, trackId, artistId, albumId, wasNew };
 }

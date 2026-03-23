@@ -1,6 +1,5 @@
-import { desc, eq } from "drizzle-orm";
-
-import { db, schema } from "@workspace/db";
+import { db } from "@workspace/db";
+import { getRecentScrobbles } from "@workspace/db/queries";
 import {
   Table,
   TableBody,
@@ -9,8 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table";
-
-const PAGE_SIZE = 50;
 
 function formatTimestamp(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -23,19 +20,7 @@ function formatTimestamp(date: Date): string {
 }
 
 export default async function ScrobblesPage() {
-  const rows = await db
-    .select({
-      id: schema.scrobbles.id,
-      listenedAt: schema.scrobbles.listenedAt,
-      source: schema.scrobbles.source,
-      trackName: schema.tracks.name,
-      artistName: schema.artists.name,
-    })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
-    .innerJoin(schema.artists, eq(schema.tracks.artistId, schema.artists.id))
-    .orderBy(desc(schema.scrobbles.listenedAt))
-    .limit(PAGE_SIZE);
+  const rows = await getRecentScrobbles(db);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">

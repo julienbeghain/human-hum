@@ -19,3 +19,15 @@
 - Uses `drizzle-orm` eq/and for type-safe WHERE conditions
 - Env vars: LASTFM_API_KEY, LASTFM_USER, DATABASE_URL (added to turbo.json globalEnv)
 - Run with: `pnpm --filter import run import`
+
+## Iteration 3: /scrobbles page (human-hum-bi7)
+
+- Created apps/web/app/scrobbles/page.tsx as a Server Component (no 'use client')
+- Query uses Drizzle select().from().innerJoin() chain — no relations defined, so explicit joins needed
+- Joined scrobbles → tracks → artists to get track name and artist name
+- Added @workspace/db and drizzle-orm as dependencies to apps/web
+- Added @workspace/db to transpilePackages in next.config.mjs
+- Used Intl.DateTimeFormat for locale-aware timestamp formatting
+- shadcn Table component is 'use client' but works fine when rendered from a Server Component
+- PAGE_SIZE=50, ordered by listenedAt desc
+- Empty state message when no scrobbles exist

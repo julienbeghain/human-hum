@@ -12,3 +12,6 @@ export const db = createDb(process.env.DATABASE_URL!);
 
 export { schema };
 export type Database = ReturnType<typeof createDb>;
+
+export { recordListen } from "./ingestion.js";
+export type { ListenInput, ScrobbleResult, Source } from "./ingestion.js";

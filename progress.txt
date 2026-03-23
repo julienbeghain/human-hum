@@ -31,3 +31,22 @@
 - shadcn Table component is 'use client' but works fine when rendered from a Server Component
 - PAGE_SIZE=50, ordered by listenedAt desc
 - Empty state message when no scrobbles exist
+
+## Iteration 4: Remove mbid from unique indexes (human-hum-180)
+
+- Dropped mbid from unique indexes: artists(name), albums(name, artist_id), tracks(name, artist_id)
+- mbid kept as nullable non-unique column — still stored but not part of entity identity
+- Ingestion entity resolution simplified: match by name (+ artist_id) only, no conditional mbid conditions
+- Test DDL must be kept in sync with schema changes — both ingestion.test.ts and queries.test.ts have inline SQL
+- `drizzle-kit generate` auto-creates DROP INDEX + CREATE INDEX migration (no manual SQL needed)
+- onConflictDoNothing() in resolveEntity still works — it just targets the new unique indexes now
+- PR #28, migration: 0001_bizarre_shooting_star.sql
+
+## Iteration 5: Move album_id from tracks to scrobbles (human-hum-3c4)
+
+- Moved album_id FK from tracks to scrobbles — album is a property of a listen event, not the track entity
+- Migration 0002_rare_thunderball.sql: adds column to scrobbles, copies data, then drops from tracks
+- Auto-generated drizzle-kit migration needed manual edit to add UPDATE step for data migration
+- recordListen() updated: albumId now goes in scrobble insert instead of track resolve values
+- Test DDL in both test files must stay in sync with schema (inline SQL, not auto-generated)
+- Dependent tasks (human-hum-0nb, human-hum-0dr) now unblocked for ingestion/query updates

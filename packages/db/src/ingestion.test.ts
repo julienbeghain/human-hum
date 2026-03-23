@@ -4,9 +4,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.setConfig({ hookTimeout: 30_000 });
 
-import type { Database } from "./index.js";
-import { recordListen } from "./ingestion.js";
-import * as schema from "./schema.js";
+import type { Database } from "./index";
+import { recordListen } from "./ingestion";
+import * as schema from "./schema";
 
 let client: PGlite;
 let db: Database;

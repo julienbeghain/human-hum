@@ -7,7 +7,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { listenSchema, timestampsWithoutUpdate } from "./shared.js";
+import { listenSchema, timestampsWithoutUpdate } from "./shared";
 
 // --- Enums ---
 

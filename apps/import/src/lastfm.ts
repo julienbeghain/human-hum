@@ -1,4 +1,5 @@
-import { createDb, recordListen } from "@workspace/db";
+import { createDb } from "@workspace/db";
+import { recordListen } from "@workspace/db/ingestion";
 
 // --- Config ---
 

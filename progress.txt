@@ -81,3 +81,14 @@
 - CLI: `--backfill` flag parsed from process.argv, no arg parser dependency needed
 - Added `import:backfill` script alias in apps/import/package.json
 - do/while loop with currentPage/totalPages — totalPages comes from first API response's @attr
+
+## Iteration 9: Incremental sync mode (human-hum-wy2)
+
+- Default CLI mode (no flags) = incremental sync: queries MAX(listened_at) - 1 second as `from`
+- 1-second overlap window handled by existing unique constraint dedup (onConflictDoNothing)
+- Falls back to full backfill recursively when DB is empty (no scrobbles yet)
+- Both incremental and backfill modes now paginate at 200/page with inter-page delay
+- Added `getLatestScrobbleTimestamp()` query using `max()` aggregate from drizzle-orm
+- Recursive call to `importScrobbles` with `backfill: true` keeps the fallback logic in one place
+- CLI wrapper simplified: no flag = sync, `--backfill` = full history re-import
+- `backfill: backfill || undefined` pattern avoids passing `false` which would skip sync detection

@@ -15,7 +15,6 @@
     "@tabler/icons-react": "^3.40.0",
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",
-    "dotenv": "^17.3.1",
     "drizzle-orm": "^0.44.7",
     "next": "16.1.6",
     "next-safe-action": "^8.1.8",
@@ -31,6 +30,7 @@
     "@types/react-dom": "^19.2.3",
     "@workspace/eslint-config": "workspace:^",
     "@workspace/typescript-config": "workspace:*",
+    "dotenv": "^17.3.1",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3"
   }

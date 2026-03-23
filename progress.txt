@@ -70,3 +70,14 @@
 - Removed drizzle-orm direct dependency from apps/import (only @workspace/db needed now)
 - Added export "./importers/lastfm" to packages/db/package.json exports map
 - `satisfies Source` used to type-check literal strings against the source enum without casting
+
+## Iteration 8: Paginated backfill with rate limiting (human-hum-99q)
+
+- Added `backfill` option to ImportOptions — when true, paginates all pages at 200 tracks/page
+- Without backfill, single page of 50 (preserves existing behavior)
+- Extracted `buildUrl()` and `fetchWithRetry()` helpers to keep the main loop clean
+- Exponential backoff on HTTP 429: BASE_DELAY_MS * 2^attempt, up to MAX_RETRIES=5
+- 200ms inter-page delay to respect LastFM rate limits
+- CLI: `--backfill` flag parsed from process.argv, no arg parser dependency needed
+- Added `import:backfill` script alias in apps/import/package.json
+- do/while loop with currentPage/totalPages — totalPages comes from first API response's @attr

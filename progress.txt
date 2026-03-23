@@ -58,3 +58,15 @@
 - /scrobbles page now shows Album column with em-dash (—) fallback for null
 - Test added for album presence; existing test asserts albumName is null when no album provided
 - No test script in packages/db/package.json — run via `cd packages/db && pnpm exec vitest run`
+
+## Iteration 7: Extract import core into packages/db/importers (human-hum-i7v)
+
+- Created packages/db/src/importers/lastfm.ts with importScrobbles(db, options) function
+- Options: apiKey, user, from?, to?, onProgress? — designed for pagination follow-up (human-hum-99q)
+- Added `from` and `to` params mapped to LastFM API's unix timestamp filters
+- onProgress callback receives {page, totalPages, imported, skipped} per page
+- Returns ImportResult: {totalImported, totalSkipped, pagesProcessed}
+- CLI wrapper (apps/import/src/lastfm.ts) reduced to ~30 lines: env vars + call importScrobbles
+- Removed drizzle-orm direct dependency from apps/import (only @workspace/db needed now)
+- Added export "./importers/lastfm" to packages/db/package.json exports map
+- `satisfies Source` used to type-check literal strings against the source enum without casting

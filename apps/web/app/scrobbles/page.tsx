@@ -36,6 +36,7 @@ export default async function ScrobblesPage() {
             <TableRow>
               <TableHead>Track</TableHead>
               <TableHead>Artist</TableHead>
+              <TableHead>Album</TableHead>
               <TableHead className="text-right">Played</TableHead>
             </TableRow>
           </TableHeader>
@@ -45,6 +46,9 @@ export default async function ScrobblesPage() {
                 <TableCell>{row.trackName}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {row.artistName}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.albumName ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-right">
                   {formatTimestamp(row.listenedAt)}

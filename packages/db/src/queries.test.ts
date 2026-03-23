@@ -82,8 +82,25 @@ describe("getRecentScrobbles", () => {
     const row = rows.find((r) => r.trackName === "Roygbiv");
     expect(row).toBeDefined();
     expect(row!.artistName).toBe("Boards of Canada");
+    expect(row!.albumName).toBeNull();
     expect(row!.source).toBe("lastfm");
     expect(row!.listenedAt).toBeInstanceOf(Date);
+  });
+
+  it("includes album name when scrobble has an album", async () => {
+    await recordListen(db, {
+      artist: { name: "Boards of Canada" },
+      album: { name: "Music Has the Right to Children" },
+      track: { name: "Aquarius" },
+      listenedAt: new Date("2024-05-01T11:00:00Z"),
+      source: "lastfm",
+    });
+
+    const rows = await getRecentScrobbles(db);
+
+    const row = rows.find((r) => r.trackName === "Aquarius");
+    expect(row).toBeDefined();
+    expect(row!.albumName).toBe("Music Has the Right to Children");
   });
 
   it("returns scrobbles ordered by listenedAt descending", async () => {

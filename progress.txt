@@ -50,3 +50,11 @@
 - recordListen() updated: albumId now goes in scrobble insert instead of track resolve values
 - Test DDL in both test files must stay in sync with schema (inline SQL, not auto-generated)
 - Dependent tasks (human-hum-0nb, human-hum-0dr) now unblocked for ingestion/query updates
+
+## Iteration 6: Update queries and /scrobbles page for new schema (human-hum-0dr)
+
+- Added leftJoin to albums table in getRecentScrobbles() — album_id is nullable so leftJoin not innerJoin
+- albumName added to ScrobbleRow type as `string | null`
+- /scrobbles page now shows Album column with em-dash (—) fallback for null
+- Test added for album presence; existing test asserts albumName is null when no album provided
+- No test script in packages/db/package.json — run via `cd packages/db && pnpm exec vitest run`

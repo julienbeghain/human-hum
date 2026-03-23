@@ -27,7 +27,7 @@ export const artists = listenSchema.table(
     mbid: varchar({ length: 36 }),
     ...timestampsWithoutUpdate,
   },
-  (t) => [uniqueIndex("artists_name_mbid_idx").on(t.name, t.mbid)],
+  (t) => [uniqueIndex("artists_name_idx").on(t.name)],
 );
 
 export const albums = listenSchema.table(
@@ -42,11 +42,7 @@ export const albums = listenSchema.table(
     ...timestampsWithoutUpdate,
   },
   (t) => [
-    uniqueIndex("albums_name_artist_id_mbid_idx").on(
-      t.name,
-      t.artistId,
-      t.mbid,
-    ),
+    uniqueIndex("albums_name_artist_id_idx").on(t.name, t.artistId),
     index("albums_artist_id_idx").on(t.artistId),
   ],
 );
@@ -64,11 +60,7 @@ export const tracks = listenSchema.table(
     ...timestampsWithoutUpdate,
   },
   (t) => [
-    uniqueIndex("tracks_name_artist_id_mbid_idx").on(
-      t.name,
-      t.artistId,
-      t.mbid,
-    ),
+    uniqueIndex("tracks_name_artist_id_idx").on(t.name, t.artistId),
     index("tracks_artist_id_idx").on(t.artistId),
     index("tracks_album_id_idx").on(t.albumId),
   ],

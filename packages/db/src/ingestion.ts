@@ -82,47 +82,38 @@ export async function recordListen(
 ): Promise<ScrobbleResult> {
   const { artists, albums, tracks, scrobbles } = schema;
 
-  // Resolve artist
+  // Resolve artist (unique on name only — mbid stored but not part of identity)
   const artistMbid = normalizeMbid(input.artist.mbid);
-  const artistConditions: SQL[] = [eq(artists.name, input.artist.name)];
-  if (artistMbid) artistConditions.push(eq(artists.mbid, artistMbid));
-
-  const artistId = await resolveEntity(db, artists, artists.id, artistConditions, {
-    name: input.artist.name,
-    mbid: artistMbid,
-  });
+  const artistId = await resolveEntity(
+    db,
+    artists,
+    artists.id,
+    [eq(artists.name, input.artist.name)],
+    { name: input.artist.name, mbid: artistMbid },
+  );
 
   // Resolve album (optional)
   let albumId: number | null = null;
   if (input.album) {
     const albumMbid = normalizeMbid(input.album.mbid);
-    const albumConditions: SQL[] = [
-      eq(albums.name, input.album.name),
-      eq(albums.artistId, artistId),
-    ];
-    if (albumMbid) albumConditions.push(eq(albums.mbid, albumMbid));
-
-    albumId = await resolveEntity(db, albums, albums.id, albumConditions, {
-      name: input.album.name,
-      mbid: albumMbid,
-      artistId,
-    });
+    albumId = await resolveEntity(
+      db,
+      albums,
+      albums.id,
+      [eq(albums.name, input.album.name), eq(albums.artistId, artistId)],
+      { name: input.album.name, mbid: albumMbid, artistId },
+    );
   }
 
-  // Resolve track
+  // Resolve track (unique on name + artist_id only)
   const trackMbid = normalizeMbid(input.track.mbid);
-  const trackConditions: SQL[] = [
-    eq(tracks.name, input.track.name),
-    eq(tracks.artistId, artistId),
-  ];
-  if (trackMbid) trackConditions.push(eq(tracks.mbid, trackMbid));
-
-  const trackId = await resolveEntity(db, tracks, tracks.id, trackConditions, {
-    name: input.track.name,
-    mbid: trackMbid,
-    artistId,
-    albumId,
-  });
+  const trackId = await resolveEntity(
+    db,
+    tracks,
+    tracks.id,
+    [eq(tracks.name, input.track.name), eq(tracks.artistId, artistId)],
+    { name: input.track.name, mbid: trackMbid, artistId, albumId },
+  );
 
   // Insert scrobble
   const inserted = await db

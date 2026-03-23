@@ -1,4 +1,4 @@
-import { desc, eq, max } from "drizzle-orm";
+import { count, desc, eq, max, min } from "drizzle-orm";
 
 import type { Database } from "./index";
 import * as schema from "./schema";
@@ -19,6 +19,22 @@ export async function getLatestScrobbleTimestamp(
     .select({ latest: max(schema.scrobbles.listenedAt) })
     .from(schema.scrobbles);
   return row?.latest ?? null;
+}
+
+export async function getEarliestScrobbleTimestamp(
+  db: Database,
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ earliest: min(schema.scrobbles.listenedAt) })
+    .from(schema.scrobbles);
+  return row?.earliest ?? null;
+}
+
+export async function getScrobbleCount(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(schema.scrobbles);
+  return row?.total ?? 0;
 }
 
 export async function getRecentScrobbles(

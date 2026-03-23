@@ -1,6 +1,10 @@
 import type { Database } from "../index";
 import { recordListen, type Source } from "../ingestion";
-import { getLatestScrobbleTimestamp } from "../queries";
+import {
+  getEarliestScrobbleTimestamp,
+  getLatestScrobbleTimestamp,
+  getScrobbleCount,
+} from "../queries";
 
 // --- LastFM API types ---
 
@@ -48,6 +52,13 @@ export interface ImportResult {
   totalImported: number;
   totalSkipped: number;
   pagesProcessed: number;
+  completeness?: CompletenessResult;
+}
+
+export interface CompletenessResult {
+  localCount: number;
+  remotePlaycount: number;
+  coveragePercent: number;
 }
 
 const BASE_DELAY_MS = 200;
@@ -64,8 +75,8 @@ export async function importScrobbles(
   db: Database,
   options: ImportOptions,
 ): Promise<ImportResult> {
-  const { apiKey, user, to, backfill, onProgress } = options;
-  let { from } = options;
+  const { apiKey, user, backfill, onProgress } = options;
+  let { from, to } = options;
 
   // Incremental sync: auto-detect `from` unless backfill or explicit `from`
   const paginate = backfill ?? false;
@@ -77,6 +88,15 @@ export async function importScrobbles(
     } else {
       // Empty DB — fall back to full backfill behavior
       return importScrobbles(db, { ...options, backfill: true });
+    }
+  }
+
+  // Backfill resume: if backfilling with existing data and no explicit `to`,
+  // set to = MIN(listened_at) + 1s so we only fetch pages older than what we have
+  if (backfill && !to) {
+    const earliest = await getEarliestScrobbleTimestamp(db);
+    if (earliest) {
+      to = new Date(earliest.getTime() + 1000);
     }
   }
 
@@ -141,7 +161,13 @@ export async function importScrobbles(
     }
   } while (currentPage <= totalPages);
 
-  return { totalImported, totalSkipped, pagesProcessed };
+  // After backfill, check completeness against LastFM playcount
+  let completeness: CompletenessResult | undefined;
+  if (backfill) {
+    completeness = await checkCompleteness(db, apiKey, user);
+  }
+
+  return { totalImported, totalSkipped, pagesProcessed, completeness };
 }
 
 // --- Helpers ---
@@ -192,6 +218,46 @@ async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
 
 function unixSeconds(date: Date): string {
   return Math.floor(date.getTime() / 1000).toString();
+}
+
+async function checkCompleteness(
+  db: Database,
+  apiKey: string,
+  user: string,
+): Promise<CompletenessResult> {
+  const [localCount, remotePlaycount] = await Promise.all([
+    getScrobbleCount(db),
+    fetchUserPlaycount(apiKey, user),
+  ]);
+  const coveragePercent =
+    remotePlaycount > 0
+      ? Math.round((localCount / remotePlaycount) * 10000) / 100
+      : 100;
+  return { localCount, remotePlaycount, coveragePercent };
+}
+
+interface LastfmUserInfo {
+  user: { playcount: string };
+}
+
+async function fetchUserPlaycount(
+  apiKey: string,
+  user: string,
+): Promise<number> {
+  const url = new URL("https://ws.audioscrobbler.com/2.0/");
+  url.searchParams.set("method", "user.getInfo");
+  url.searchParams.set("user", user);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("format", "json");
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `LastFM user.getInfo error: ${response.status} ${response.statusText}`,
+    );
+  }
+  const data = (await response.json()) as LastfmUserInfo;
+  return parseInt(data.user.playcount, 10);
 }
 
 function delay(ms: number): Promise<void> {

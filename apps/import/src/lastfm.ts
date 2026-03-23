@@ -25,10 +25,15 @@ importScrobbles(db, {
     );
   },
 })
-  .then(({ totalImported, totalSkipped, pagesProcessed }) => {
+  .then(({ totalImported, totalSkipped, pagesProcessed, completeness }) => {
     console.log(
       `\nDone: ${totalImported} imported, ${totalSkipped} skipped across ${pagesProcessed} page(s)`,
     );
+    if (completeness) {
+      console.log(
+        `Completeness: ${completeness.localCount}/${completeness.remotePlaycount} scrobbles (${completeness.coveragePercent}%)`,
+      );
+    }
   })
   .catch((err) => {
     console.error("Import failed:", err);

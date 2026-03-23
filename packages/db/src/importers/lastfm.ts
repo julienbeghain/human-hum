@@ -31,6 +31,8 @@ export interface ImportOptions {
   user: string;
   from?: Date;
   to?: Date;
+  /** Paginate through all pages (200 tracks/page). Default: single page of 50. */
+  backfill?: boolean;
   onProgress?: (progress: PageProgress) => void;
 }
 
@@ -47,77 +49,131 @@ export interface ImportResult {
   pagesProcessed: number;
 }
 
+const BASE_DELAY_MS = 200;
+const MAX_RETRIES = 5;
+
 /**
  * Import scrobbles from LastFM into the database.
- * Currently fetches a single page; pagination will be added by a follow-up task.
+ * With backfill=true, paginates through all pages (200/page, newest-first).
  */
 export async function importScrobbles(
   db: Database,
   options: ImportOptions,
 ): Promise<ImportResult> {
-  const { apiKey, user, from, to, onProgress } = options;
+  const { apiKey, user, from, to, backfill, onProgress } = options;
+  const limit = backfill ? 200 : 50;
 
+  let totalImported = 0;
+  let totalSkipped = 0;
+  let pagesProcessed = 0;
+  let currentPage = 1;
+  let totalPages = 1;
+
+  do {
+    const url = buildUrl({ apiKey, user, from, to, limit, page: currentPage });
+    const data = await fetchWithRetry(url);
+
+    const pageTracks = data.recenttracks.track;
+    const attrs = data.recenttracks["@attr"];
+    totalPages = parseInt(attrs.totalPages, 10);
+
+    let pageImported = 0;
+    let pageSkipped = 0;
+
+    for (const t of pageTracks) {
+      if (t["@attr"]?.nowplaying === "true" || !t.date) {
+        pageSkipped++;
+        continue;
+      }
+
+      const result = await recordListen(db, {
+        artist: {
+          name: t.artist["#text"],
+          mbid: t.artist.mbid || undefined,
+        },
+        album: t.album["#text"]
+          ? { name: t.album["#text"], mbid: t.album.mbid || undefined }
+          : undefined,
+        track: { name: t.name, mbid: t.mbid || undefined },
+        listenedAt: new Date(parseInt(t.date.uts, 10) * 1000),
+        source: "lastfm" satisfies Source,
+      });
+
+      if (result.wasNew) pageImported++;
+      else pageSkipped++;
+    }
+
+    totalImported += pageImported;
+    totalSkipped += pageSkipped;
+    pagesProcessed++;
+
+    onProgress?.({
+      page: currentPage,
+      totalPages,
+      imported: pageImported,
+      skipped: pageSkipped,
+    });
+
+    currentPage++;
+
+    if (backfill && currentPage <= totalPages) {
+      await delay(BASE_DELAY_MS);
+    }
+  } while (backfill && currentPage <= totalPages);
+
+  return { totalImported, totalSkipped, pagesProcessed };
+}
+
+// --- Helpers ---
+
+function buildUrl(params: {
+  apiKey: string;
+  user: string;
+  from?: Date;
+  to?: Date;
+  limit: number;
+  page: number;
+}): URL {
   const url = new URL("https://ws.audioscrobbler.com/2.0/");
   url.searchParams.set("method", "user.getRecentTracks");
-  url.searchParams.set("user", user);
-  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("user", params.user);
+  url.searchParams.set("api_key", params.apiKey);
   url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "50");
-  url.searchParams.set("page", "1");
+  url.searchParams.set("limit", params.limit.toString());
+  url.searchParams.set("page", params.page.toString());
 
-  if (from) url.searchParams.set("from", unixSeconds(from));
-  if (to) url.searchParams.set("to", unixSeconds(to));
+  if (params.from) url.searchParams.set("from", unixSeconds(params.from));
+  if (params.to) url.searchParams.set("to", unixSeconds(params.to));
 
-  const response = await fetch(url);
-  if (!response.ok) {
+  return url;
+}
+
+async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch(url);
+
+    if (response.ok) {
+      return (await response.json()) as LastfmResponse;
+    }
+
+    if (response.status === 429 && attempt < MAX_RETRIES) {
+      const backoff = BASE_DELAY_MS * Math.pow(2, attempt);
+      await delay(backoff);
+      continue;
+    }
+
     throw new Error(
       `LastFM API error: ${response.status} ${response.statusText}`,
     );
   }
 
-  const data = (await response.json()) as LastfmResponse;
-  const pageTracks = data.recenttracks.track;
-  const attrs = data.recenttracks["@attr"];
-
-  let imported = 0;
-  let skipped = 0;
-
-  for (const t of pageTracks) {
-    if (t["@attr"]?.nowplaying === "true" || !t.date) {
-      skipped++;
-      continue;
-    }
-
-    const result = await recordListen(db, {
-      artist: { name: t.artist["#text"], mbid: t.artist.mbid || undefined },
-      album: t.album["#text"]
-        ? { name: t.album["#text"], mbid: t.album.mbid || undefined }
-        : undefined,
-      track: { name: t.name, mbid: t.mbid || undefined },
-      listenedAt: new Date(parseInt(t.date.uts, 10) * 1000),
-      source: "lastfm" satisfies Source,
-    });
-
-    if (result.wasNew) imported++;
-    else skipped++;
-  }
-
-  onProgress?.({
-    page: parseInt(attrs.page, 10),
-    totalPages: parseInt(attrs.totalPages, 10),
-    imported,
-    skipped,
-  });
-
-  return {
-    totalImported: imported,
-    totalSkipped: skipped,
-    pagesProcessed: 1,
-  };
+  throw new Error("LastFM API: max retries exceeded");
 }
-
-// --- Helpers ---
 
 function unixSeconds(date: Date): string {
   return Math.floor(date.getTime() / 1000).toString();
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

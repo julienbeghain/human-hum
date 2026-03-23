@@ -7,24 +7,28 @@ function requireEnv(name: string): string {
   return value;
 }
 
+const backfill = process.argv.includes("--backfill");
 const apiKey = requireEnv("LASTFM_API_KEY");
 const user = requireEnv("LASTFM_USER");
 const db = createDb(requireEnv("DATABASE_URL"));
 
-console.log(`Importing scrobbles for ${user}...`);
+console.log(
+  `Importing scrobbles for ${user}${backfill ? " (full backfill)" : ""}...`,
+);
 
 importScrobbles(db, {
   apiKey,
   user,
+  backfill,
   onProgress: ({ page, totalPages, imported, skipped }) => {
     console.log(
       `Page ${page}/${totalPages}: ${imported} imported, ${skipped} skipped`,
     );
   },
 })
-  .then(({ totalImported, totalSkipped }) => {
+  .then(({ totalImported, totalSkipped, pagesProcessed }) => {
     console.log(
-      `\nDone: ${totalImported} scrobbles imported, ${totalSkipped} skipped`,
+      `\nDone: ${totalImported} imported, ${totalSkipped} skipped across ${pagesProcessed} page(s)`,
     );
   })
   .catch((err) => {

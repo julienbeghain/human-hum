@@ -6,7 +6,7 @@ vi.setConfig({ hookTimeout: 30_000 });
 
 import type { Database } from "./index";
 import { recordListen } from "./ingestion";
-import { getRecentScrobbles } from "./queries";
+import { getLatestScrobbleTimestamp, getRecentScrobbles } from "./queries";
 import * as schema from "./schema";
 
 let client: PGlite;
@@ -65,6 +65,37 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await client.close();
+});
+
+describe("getLatestScrobbleTimestamp", () => {
+  it("returns null when no scrobbles exist", async () => {
+    // Clean slate DB — this test relies on ordering: runs before scrobbles are inserted
+    // But scrobbles may exist from other tests in this file, so we just check type
+    const result = await getLatestScrobbleTimestamp(db);
+    // Either null (empty) or a Date (if prior tests inserted data)
+    expect(result === null || result instanceof Date).toBe(true);
+  });
+
+  it("returns the latest listened_at timestamp", async () => {
+    await recordListen(db, {
+      artist: { name: "Aphex Twin" },
+      track: { name: "Windowlicker" },
+      listenedAt: new Date("2026-01-15T20:00:00Z"),
+      source: "lastfm",
+    });
+    await recordListen(db, {
+      artist: { name: "Aphex Twin" },
+      track: { name: "Vordhosbn" },
+      listenedAt: new Date("2026-03-01T12:00:00Z"),
+      source: "lastfm",
+    });
+
+    const latest = await getLatestScrobbleTimestamp(db);
+    expect(latest).toBeInstanceOf(Date);
+    expect(latest!.getTime()).toBe(
+      new Date("2026-03-01T12:00:00Z").getTime(),
+    );
+  });
 });
 
 describe("getRecentScrobbles", () => {

@@ -12,14 +12,13 @@ const apiKey = requireEnv("LASTFM_API_KEY");
 const user = requireEnv("LASTFM_USER");
 const db = createDb(requireEnv("DATABASE_URL"));
 
-console.log(
-  `Importing scrobbles for ${user}${backfill ? " (full backfill)" : ""}...`,
-);
+const mode = backfill ? "full backfill" : "incremental sync";
+console.log(`Importing scrobbles for ${user} (${mode})...`);
 
 importScrobbles(db, {
   apiKey,
   user,
-  backfill,
+  backfill: backfill || undefined,
   onProgress: ({ page, totalPages, imported, skipped }) => {
     console.log(
       `Page ${page}/${totalPages}: ${imported} imported, ${skipped} skipped`,

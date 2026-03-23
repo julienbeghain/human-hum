@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, max } from "drizzle-orm";
 
 import type { Database } from "./index";
 import * as schema from "./schema";
@@ -11,6 +11,15 @@ export type ScrobbleRow = {
   artistName: string;
   albumName: string | null;
 };
+
+export async function getLatestScrobbleTimestamp(
+  db: Database,
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ latest: max(schema.scrobbles.listenedAt) })
+    .from(schema.scrobbles);
+  return row?.latest ?? null;
+}
 
 export async function getRecentScrobbles(
   db: Database,

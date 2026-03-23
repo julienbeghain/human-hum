@@ -1,5 +1,6 @@
 import type { Database } from "../index";
 import { recordListen, type Source } from "../ingestion";
+import { getLatestScrobbleTimestamp } from "../queries";
 
 // --- LastFM API types ---
 
@@ -54,14 +55,33 @@ const MAX_RETRIES = 5;
 
 /**
  * Import scrobbles from LastFM into the database.
- * With backfill=true, paginates through all pages (200/page, newest-first).
+ *
+ * - Default (no flags): incremental sync — fetches from MAX(listened_at)-1s,
+ *   paginates through all new scrobbles. Falls back to full backfill on empty DB.
+ * - backfill=true: full backfill, paginates all pages (200/page, newest-first).
  */
 export async function importScrobbles(
   db: Database,
   options: ImportOptions,
 ): Promise<ImportResult> {
-  const { apiKey, user, from, to, backfill, onProgress } = options;
-  const limit = backfill ? 200 : 50;
+  const { apiKey, user, to, backfill, onProgress } = options;
+  let { from } = options;
+
+  // Incremental sync: auto-detect `from` unless backfill or explicit `from`
+  const paginate = backfill ?? false;
+  if (!backfill && !from) {
+    const latest = await getLatestScrobbleTimestamp(db);
+    if (latest) {
+      // 1-second overlap — dedup via unique constraint handles duplicates
+      from = new Date(latest.getTime() - 1000);
+    } else {
+      // Empty DB — fall back to full backfill behavior
+      return importScrobbles(db, { ...options, backfill: true });
+    }
+  }
+
+  // Backfill and incremental sync both paginate at 200/page
+  const limit = paginate || from ? 200 : 50;
 
   let totalImported = 0;
   let totalSkipped = 0;
@@ -116,10 +136,10 @@ export async function importScrobbles(
 
     currentPage++;
 
-    if (backfill && currentPage <= totalPages) {
+    if (currentPage <= totalPages) {
       await delay(BASE_DELAY_MS);
     }
-  } while (backfill && currentPage <= totalPages);
+  } while (currentPage <= totalPages);
 
   return { totalImported, totalSkipped, pagesProcessed };
 }

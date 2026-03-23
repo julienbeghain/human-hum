@@ -8,7 +8,12 @@ export function createDb(url: string) {
   return drizzle({ client: sql, schema });
 }
 
-export const db = createDb(process.env.DATABASE_URL!);
+const globalForDb = globalThis as unknown as { __drizzleDb__?: Database };
+
+export const db =
+  globalForDb.__drizzleDb__ ?? createDb(process.env.DATABASE_URL!);
+
+globalForDb.__drizzleDb__ = db;
 
 export { schema };
 export type Database = ReturnType<typeof createDb>;

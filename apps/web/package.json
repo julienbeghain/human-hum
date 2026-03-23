@@ -4,9 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
+    "with-env": "dotenv -e ../../.env --",
+    "dev": "pnpm with-env next dev --turbopack",
+    "build": "pnpm with-env next build",
+    "start": "pnpm with-env next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit"
@@ -30,6 +31,7 @@
     "@types/react-dom": "^19.2.3",
     "@workspace/eslint-config": "workspace:^",
     "@workspace/typescript-config": "workspace:*",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3"
   }

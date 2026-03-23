@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "import": "tsx src/lastfm.ts",
+    "with-env": "dotenv -e ../../.env --",
+    "import": "pnpm with-env tsx src/lastfm.ts",
     "lint": "eslint",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit"
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.2",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3"

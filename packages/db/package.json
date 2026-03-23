@@ -7,10 +7,11 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "with-env": "dotenv -e ../../.env --",
+    "db:generate": "pnpm with-env drizzle-kit generate",
+    "db:migrate": "pnpm with-env drizzle-kit migrate",
+    "db:push": "pnpm with-env drizzle-kit push",
+    "db:studio": "pnpm with-env drizzle-kit studio"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
@@ -20,7 +21,7 @@
     "@electric-sql/pglite": "^0.4.1",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
-    "dotenv": "^17.3.1",
+    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.0",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",

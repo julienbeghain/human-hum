@@ -31,3 +31,74 @@
 - shadcn Table component is 'use client' but works fine when rendered from a Server Component
 - PAGE_SIZE=50, ordered by listenedAt desc
 - Empty state message when no scrobbles exist
+
+## Iteration 4: Remove mbid from unique indexes (human-hum-180)
+
+- Dropped mbid from unique indexes: artists(name), albums(name, artist_id), tracks(name, artist_id)
+- mbid kept as nullable non-unique column — still stored but not part of entity identity
+- Ingestion entity resolution simplified: match by name (+ artist_id) only, no conditional mbid conditions
+- Test DDL must be kept in sync with schema changes — both ingestion.test.ts and queries.test.ts have inline SQL
+- `drizzle-kit generate` auto-creates DROP INDEX + CREATE INDEX migration (no manual SQL needed)
+- onConflictDoNothing() in resolveEntity still works — it just targets the new unique indexes now
+- PR #28, migration: 0001_bizarre_shooting_star.sql
+
+## Iteration 5: Move album_id from tracks to scrobbles (human-hum-3c4)
+
+- Moved album_id FK from tracks to scrobbles — album is a property of a listen event, not the track entity
+- Migration 0002_rare_thunderball.sql: adds column to scrobbles, copies data, then drops from tracks
+- Auto-generated drizzle-kit migration needed manual edit to add UPDATE step for data migration
+- recordListen() updated: albumId now goes in scrobble insert instead of track resolve values
+- Test DDL in both test files must stay in sync with schema (inline SQL, not auto-generated)
+- Dependent tasks (human-hum-0nb, human-hum-0dr) now unblocked for ingestion/query updates
+
+## Iteration 6: Update queries and /scrobbles page for new schema (human-hum-0dr)
+
+- Added leftJoin to albums table in getRecentScrobbles() — album_id is nullable so leftJoin not innerJoin
+- albumName added to ScrobbleRow type as `string | null`
+- /scrobbles page now shows Album column with em-dash (—) fallback for null
+- Test added for album presence; existing test asserts albumName is null when no album provided
+- No test script in packages/db/package.json — run via `cd packages/db && pnpm exec vitest run`
+
+## Iteration 7: Extract import core into packages/db/importers (human-hum-i7v)
+
+- Created packages/db/src/importers/lastfm.ts with importScrobbles(db, options) function
+- Options: apiKey, user, from?, to?, onProgress? — designed for pagination follow-up (human-hum-99q)
+- Added `from` and `to` params mapped to LastFM API's unix timestamp filters
+- onProgress callback receives {page, totalPages, imported, skipped} per page
+- Returns ImportResult: {totalImported, totalSkipped, pagesProcessed}
+- CLI wrapper (apps/import/src/lastfm.ts) reduced to ~30 lines: env vars + call importScrobbles
+- Removed drizzle-orm direct dependency from apps/import (only @workspace/db needed now)
+- Added export "./importers/lastfm" to packages/db/package.json exports map
+- `satisfies Source` used to type-check literal strings against the source enum without casting
+
+## Iteration 8: Paginated backfill with rate limiting (human-hum-99q)
+
+- Added `backfill` option to ImportOptions — when true, paginates all pages at 200 tracks/page
+- Without backfill, single page of 50 (preserves existing behavior)
+- Extracted `buildUrl()` and `fetchWithRetry()` helpers to keep the main loop clean
+- Exponential backoff on HTTP 429: BASE_DELAY_MS * 2^attempt, up to MAX_RETRIES=5
+- 200ms inter-page delay to respect LastFM rate limits
+- CLI: `--backfill` flag parsed from process.argv, no arg parser dependency needed
+- Added `import:backfill` script alias in apps/import/package.json
+- do/while loop with currentPage/totalPages — totalPages comes from first API response's @attr
+
+## Iteration 9: Incremental sync mode (human-hum-wy2)
+
+- Default CLI mode (no flags) = incremental sync: queries MAX(listened_at) - 1 second as `from`
+- 1-second overlap window handled by existing unique constraint dedup (onConflictDoNothing)
+- Falls back to full backfill recursively when DB is empty (no scrobbles yet)
+- Both incremental and backfill modes now paginate at 200/page with inter-page delay
+- Added `getLatestScrobbleTimestamp()` query using `max()` aggregate from drizzle-orm
+- Recursive call to `importScrobbles` with `backfill: true` keeps the fallback logic in one place
+- CLI wrapper simplified: no flag = sync, `--backfill` = full history re-import
+- `backfill: backfill || undefined` pattern avoids passing `false` which would skip sync detection
+
+## Iteration 10: Backfill resume + completeness check (human-hum-3lm)
+
+- Resume interrupted backfill: auto-set `to = MIN(listened_at) + 1s` so only older pages are fetched
+- `getEarliestScrobbleTimestamp()` and `getScrobbleCount()` added to queries.ts using `min()` and `count()` aggregates
+- Completeness check: after backfill, calls `user.getInfo` API to get remote playcount, compares with local COUNT(*)
+- `CompletenessResult` type: { localCount, remotePlaycount, coveragePercent }
+- Coverage will never be 100% — LastFM counts "now playing" entries and deleted tracks in playcount
+- Backfill resume only activates when `to` is not explicitly set — explicit `to` takes precedence
+- `let { from, to } = options` — destructuring with `let` allows reassignment in the function body

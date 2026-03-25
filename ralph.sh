@@ -6,7 +6,7 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
   ITERATION=$((ITERATION + 1))
   echo "=== Ralph iteration $ITERATION of $MAX_ITERATIONS ==="
 
-  RESULT=$(claude -p "$(cat RALPH-PROMPT.md)")
+  RESULT=$(claude -p --dangerously-skip-permissions "$(cat RALPH-PROMPT.md)")
 
   if echo "$RESULT" | grep -q "<promise>COMPLETE</promise>"; then
     echo "All tasks complete after $ITERATION iterations!"

@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { getRecentScrobbles } from "@workspace/db/queries";
+import { getScrobbles } from "@workspace/db/queries";
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ function formatTimestamp(date: Date): string {
 }
 
 export default async function ScrobblesPage() {
-  const rows = await getRecentScrobbles(db);
+  const rows = await getScrobbles(db);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
@@ -36,6 +36,7 @@ export default async function ScrobblesPage() {
             <TableRow>
               <TableHead>Track</TableHead>
               <TableHead>Artist</TableHead>
+              <TableHead>Album</TableHead>
               <TableHead className="text-right">Played</TableHead>
             </TableRow>
           </TableHeader>
@@ -45,6 +46,9 @@ export default async function ScrobblesPage() {
                 <TableCell>{row.trackName}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {row.artistName}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.albumName ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-right">
                   {formatTimestamp(row.listenedAt)}

@@ -27,7 +27,7 @@ export const artists = listenSchema.table(
     mbid: varchar({ length: 36 }),
     ...timestampsWithoutUpdate,
   },
-  (t) => [uniqueIndex("artists_name_mbid_idx").on(t.name, t.mbid)],
+  (t) => [uniqueIndex("artists_name_idx").on(t.name)],
 );
 
 export const albums = listenSchema.table(
@@ -42,11 +42,7 @@ export const albums = listenSchema.table(
     ...timestampsWithoutUpdate,
   },
   (t) => [
-    uniqueIndex("albums_name_artist_id_mbid_idx").on(
-      t.name,
-      t.artistId,
-      t.mbid,
-    ),
+    uniqueIndex("albums_name_artist_id_idx").on(t.name, t.artistId),
     index("albums_artist_id_idx").on(t.artistId),
   ],
 );
@@ -60,17 +56,11 @@ export const tracks = listenSchema.table(
     artistId: integer("artist_id")
       .notNull()
       .references(() => artists.id),
-    albumId: integer("album_id").references(() => albums.id),
     ...timestampsWithoutUpdate,
   },
   (t) => [
-    uniqueIndex("tracks_name_artist_id_mbid_idx").on(
-      t.name,
-      t.artistId,
-      t.mbid,
-    ),
+    uniqueIndex("tracks_name_artist_id_idx").on(t.name, t.artistId),
     index("tracks_artist_id_idx").on(t.artistId),
-    index("tracks_album_id_idx").on(t.albumId),
   ],
 );
 
@@ -83,6 +73,7 @@ export const scrobbles = listenSchema.table(
     trackId: integer("track_id")
       .notNull()
       .references(() => tracks.id),
+    albumId: integer("album_id").references(() => albums.id),
     listenedAt: timestamp("listened_at", { withTimezone: true }).notNull(),
     source: sourceEnum().notNull(),
     ...timestampsWithoutUpdate,
@@ -93,6 +84,7 @@ export const scrobbles = listenSchema.table(
       t.listenedAt,
     ),
     index("scrobbles_listened_at_idx").on(t.listenedAt),
+    index("scrobbles_album_id_idx").on(t.albumId),
     index("scrobbles_source_idx").on(t.source),
   ],
 );

@@ -26,7 +26,7 @@ beforeAll(async () => {
       "created_at" timestamp with time zone DEFAULT now() NOT NULL,
       "deleted_at" timestamp with time zone
     );
-    CREATE UNIQUE INDEX "artists_name_mbid_idx" ON "listen"."artists" ("name", "mbid");
+    CREATE UNIQUE INDEX "artists_name_idx" ON "listen"."artists" ("name");
 
     CREATE TABLE "listen"."albums" (
       "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -36,22 +36,22 @@ beforeAll(async () => {
       "created_at" timestamp with time zone DEFAULT now() NOT NULL,
       "deleted_at" timestamp with time zone
     );
-    CREATE UNIQUE INDEX "albums_name_artist_id_mbid_idx" ON "listen"."albums" ("name", "artist_id", "mbid");
+    CREATE UNIQUE INDEX "albums_name_artist_id_idx" ON "listen"."albums" ("name", "artist_id");
 
     CREATE TABLE "listen"."tracks" (
       "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
       "name" text NOT NULL,
       "mbid" varchar(36),
       "artist_id" integer NOT NULL REFERENCES "listen"."artists"("id"),
-      "album_id" integer REFERENCES "listen"."albums"("id"),
       "created_at" timestamp with time zone DEFAULT now() NOT NULL,
       "deleted_at" timestamp with time zone
     );
-    CREATE UNIQUE INDEX "tracks_name_artist_id_mbid_idx" ON "listen"."tracks" ("name", "artist_id", "mbid");
+    CREATE UNIQUE INDEX "tracks_name_artist_id_idx" ON "listen"."tracks" ("name", "artist_id");
 
     CREATE TABLE "listen"."scrobbles" (
       "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
       "track_id" integer NOT NULL REFERENCES "listen"."tracks"("id"),
+      "album_id" integer REFERENCES "listen"."albums"("id"),
       "listened_at" timestamp with time zone NOT NULL,
       "source" "listen"."source" NOT NULL,
       "created_at" timestamp with time zone DEFAULT now() NOT NULL,

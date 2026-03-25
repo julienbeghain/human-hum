@@ -1,10 +1,6 @@
 import type { Database } from "../index";
 import { recordListen, type Source } from "../ingestion";
-import {
-  getEarliestScrobbleTimestamp,
-  getLatestScrobbleTimestamp,
-  getScrobbleCount,
-} from "../queries";
+import { getScrobbles, getStats } from "../queries";
 
 // --- LastFM API types ---
 
@@ -81,10 +77,10 @@ export async function importScrobbles(
   // Incremental sync: auto-detect `from` unless backfill or explicit `from`
   const paginate = backfill ?? false;
   if (!backfill && !from) {
-    const latest = await getLatestScrobbleTimestamp(db);
+    const [latest] = await getScrobbles(db, { limit: 1 });
     if (latest) {
       // 1-second overlap — dedup via unique constraint handles duplicates
-      from = new Date(latest.getTime() - 1000);
+      from = new Date(latest.listenedAt.getTime() - 1000);
     } else {
       // Empty DB — fall back to full backfill behavior
       return importScrobbles(db, { ...options, backfill: true });
@@ -94,9 +90,9 @@ export async function importScrobbles(
   // Backfill resume: if backfilling with existing data and no explicit `to`,
   // set to = MIN(listened_at) + 1s so we only fetch pages older than what we have
   if (backfill && !to) {
-    const earliest = await getEarliestScrobbleTimestamp(db);
+    const [earliest] = await getScrobbles(db, { limit: 1, orderAsc: true });
     if (earliest) {
-      to = new Date(earliest.getTime() + 1000);
+      to = new Date(earliest.listenedAt.getTime() + 1000);
     }
   }
 
@@ -235,10 +231,11 @@ async function checkCompleteness(
   apiKey: string,
   user: string,
 ): Promise<CompletenessResult> {
-  const [localCount, remotePlaycount] = await Promise.all([
-    getScrobbleCount(db),
+  const [stats, remotePlaycount] = await Promise.all([
+    getStats(db),
     fetchUserPlaycount(apiKey, user),
   ]);
+  const localCount = stats.total;
   const coveragePercent =
     remotePlaycount > 0
       ? Math.round((localCount / remotePlaycount) * 10000) / 100

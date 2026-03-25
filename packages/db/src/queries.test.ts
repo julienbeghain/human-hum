@@ -20,6 +20,13 @@ import * as schema from "./schema";
 let client: PGlite;
 let db: Database;
 
+// Known IDs populated during seed — avoids chaining queries to discover them
+let aphexTwinId: number;
+let boardsOfCanadaId: number;
+let autechreId: number;
+let mhtrtcAlbumId: number;
+let drukqsAlbumId: number;
+
 beforeAll(async () => {
   client = new PGlite();
 
@@ -70,27 +77,43 @@ beforeAll(async () => {
 
   db = drizzle({ client, schema }) as unknown as Database;
 
-  // Seed data for all tests
-  await recordListen(db, {
+  // Seed data — capture entity IDs for direct use in tests
+  //
+  // Timeline:
+  //   2020-01-01T00:00 Autechre  - Clipper                          (spotify, hour 0)
+  //   2024-05-01T10:00 BoC       - Roygbiv  [MHTRTC]               (lastfm,  hour 10)
+  //   2024-05-01T11:00 BoC       - Aquarius [MHTRTC]               (lastfm,  hour 11)
+  //   2025-12-31T23:59 Autechre  - Bike                            (spotify, hour 23)
+  //   2026-01-15T20:00 Aphex Twin - Windowlicker                   (lastfm,  hour 20)
+  //   2026-03-01T12:00 Aphex Twin - Vordhosbn [Drukqs]             (lastfm,  hour 12)
+
+  const r1 = await recordListen(db, {
     artist: { name: "Aphex Twin" },
     track: { name: "Windowlicker" },
     listenedAt: new Date("2026-01-15T20:00:00Z"),
     source: "lastfm",
   });
-  await recordListen(db, {
+  aphexTwinId = r1.artistId;
+
+  const r2 = await recordListen(db, {
     artist: { name: "Aphex Twin" },
     track: { name: "Vordhosbn" },
     album: { name: "Drukqs" },
     listenedAt: new Date("2026-03-01T12:00:00Z"),
     source: "lastfm",
   });
-  await recordListen(db, {
+  drukqsAlbumId = r2.albumId!;
+
+  const r3 = await recordListen(db, {
     artist: { name: "Boards of Canada" },
     track: { name: "Roygbiv" },
     album: { name: "Music Has the Right to Children" },
     listenedAt: new Date("2024-05-01T10:00:00Z"),
     source: "lastfm",
   });
+  boardsOfCanadaId = r3.artistId;
+  mhtrtcAlbumId = r3.albumId!;
+
   await recordListen(db, {
     artist: { name: "Boards of Canada" },
     track: { name: "Aquarius" },
@@ -98,12 +121,15 @@ beforeAll(async () => {
     listenedAt: new Date("2024-05-01T11:00:00Z"),
     source: "lastfm",
   });
-  await recordListen(db, {
+
+  const r5 = await recordListen(db, {
     artist: { name: "Autechre" },
     track: { name: "Clipper" },
     listenedAt: new Date("2020-01-01T00:00:00Z"),
     source: "spotify",
   });
+  autechreId = r5.artistId;
+
   await recordListen(db, {
     artist: { name: "Autechre" },
     track: { name: "Bike" },
@@ -121,7 +147,7 @@ afterAll(async () => {
 describe("getScrobbles", () => {
   it("returns scrobbles with track and artist names", async () => {
     const rows = await getScrobbles(db);
-    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBe(6);
 
     const row = rows.find((r) => r.trackName === "Roygbiv");
     expect(row).toBeDefined();
@@ -170,7 +196,6 @@ describe("getScrobbles", () => {
       cursor: first[1]!.listenedAt,
     });
     expect(next.length).toBeGreaterThan(0);
-    // All results should be older than the cursor
     for (const row of next) {
       expect(row.listenedAt.getTime()).toBeLessThan(
         first[1]!.listenedAt.getTime(),
@@ -178,24 +203,24 @@ describe("getScrobbles", () => {
     }
   });
 
-  it("filters by time range", async () => {
-    const rows = await getScrobbles(db, {
-      from: new Date("2025-01-01T00:00:00Z"),
-      to: new Date("2026-12-31T23:59:59Z"),
-    });
+  it("filters by time range (from and to)", async () => {
+    const from = new Date("2025-01-01T00:00:00Z");
+    const to = new Date("2026-01-31T23:59:59Z");
+    const rows = await getScrobbles(db, { from, to });
+
+    expect(rows.length).toBe(2); // Autechre Bike + Aphex Twin Windowlicker
     for (const row of rows) {
-      expect(row.listenedAt.getTime()).toBeGreaterThanOrEqual(
-        new Date("2025-01-01T00:00:00Z").getTime(),
-      );
+      expect(row.listenedAt.getTime()).toBeGreaterThanOrEqual(from.getTime());
+      expect(row.listenedAt.getTime()).toBeLessThanOrEqual(to.getTime());
     }
   });
 
   it("filters by source", async () => {
     const rows = await getScrobbles(db, { source: "spotify" });
+    expect(rows.length).toBe(2);
     for (const row of rows) {
       expect(row.source).toBe("spotify");
     }
-    expect(rows.length).toBe(2);
   });
 });
 
@@ -215,14 +240,14 @@ describe("getStats", () => {
     );
     expect(stats.uniqueArtists).toBe(3);
     expect(stats.uniqueTracks).toBe(6);
-    expect(stats.uniqueAlbums).toBeGreaterThanOrEqual(1);
+    expect(stats.uniqueAlbums).toBe(2); // Drukqs + MHTRTC
   });
 
   it("filters stats by time range", async () => {
     const stats = await getStats(db, {
       from: new Date("2026-01-01T00:00:00Z"),
     });
-    expect(stats.total).toBe(2); // Aphex Twin tracks in 2026
+    expect(stats.total).toBe(2);
     expect(stats.uniqueArtists).toBe(1);
   });
 });
@@ -233,10 +258,12 @@ describe("getArtistRankings", () => {
   it("ranks artists by play count descending", async () => {
     const rankings = await getArtistRankings(db);
     expect(rankings.length).toBe(3);
-    // Each artist has 2 scrobbles, so order may vary — just check structure
-    expect(rankings[0]!.playCount).toBeGreaterThanOrEqual(
-      rankings[1]!.playCount,
-    );
+    // All artists have 2 plays — verify ordering is stable (descending)
+    for (let i = 1; i < rankings.length; i++) {
+      expect(rankings[i - 1]!.playCount).toBeGreaterThanOrEqual(
+        rankings[i]!.playCount,
+      );
+    }
     expect(rankings[0]!.artistName).toBeTruthy();
     expect(rankings[0]!.artistId).toBeGreaterThan(0);
   });
@@ -259,12 +286,7 @@ describe("getArtistRankings", () => {
 
 describe("getArtistDetail", () => {
   it("returns artist info with top tracks and albums", async () => {
-    // Find Boards of Canada's ID via rankings
-    const rankings = await getArtistRankings(db);
-    const boc = rankings.find((r) => r.artistName === "Boards of Canada");
-    expect(boc).toBeDefined();
-
-    const detail = await getArtistDetail(db, { artistId: boc!.artistId });
+    const detail = await getArtistDetail(db, { artistId: boardsOfCanadaId });
     expect(detail).not.toBeNull();
     expect(detail!.artistName).toBe("Boards of Canada");
     expect(detail!.playCount).toBe(2);
@@ -285,13 +307,7 @@ describe("getArtistDetail", () => {
 
 describe("getAlbumDetail", () => {
   it("returns album info with track listing", async () => {
-    // Find the album ID via artist detail
-    const rankings = await getArtistRankings(db);
-    const boc = rankings.find((r) => r.artistName === "Boards of Canada");
-    const detail = await getArtistDetail(db, { artistId: boc!.artistId });
-    const albumId = detail!.topAlbums[0]!.albumId;
-
-    const album = await getAlbumDetail(db, { albumId });
+    const album = await getAlbumDetail(db, { albumId: mhtrtcAlbumId });
     expect(album).not.toBeNull();
     expect(album!.albumName).toBe("Music Has the Right to Children");
     expect(album!.artistName).toBe("Boards of Canada");
@@ -319,7 +335,7 @@ describe("getTimeSeries", () => {
 
   it("buckets scrobbles by year", async () => {
     const series = await getTimeSeries(db, { period: "year" });
-    // We have scrobbles in 2020, 2024, 2025, 2026
+    // 2020, 2024, 2025, 2026
     expect(series.length).toBe(4);
     const totalCount = series.reduce((sum, b) => sum + b.count, 0);
     expect(totalCount).toBe(6);
@@ -352,10 +368,16 @@ describe("getListeningClock", () => {
     expect(totalCount).toBe(6);
   });
 
-  it("fills missing hours with zero", async () => {
+  it("populates exactly the hours with scrobbles", async () => {
+    // Seed hours: 0 (Clipper), 10 (Roygbiv), 11 (Aquarius), 12 (Vordhosbn), 20 (Windowlicker), 23 (Bike)
     const clock = await getListeningClock(db);
-    // Most hours should be 0
+    const populated = clock.filter((s) => s.count > 0);
+    expect(populated.length).toBe(6);
+
+    const populatedHours = populated.map((s) => s.hour).sort((a, b) => a - b);
+    expect(populatedHours).toEqual([0, 10, 11, 12, 20, 23]);
+
     const zeroHours = clock.filter((s) => s.count === 0);
-    expect(zeroHours.length).toBeGreaterThanOrEqual(18);
+    expect(zeroHours.length).toBe(18);
   });
 });

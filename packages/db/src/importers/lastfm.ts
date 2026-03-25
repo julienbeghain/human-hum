@@ -196,7 +196,17 @@ function buildUrl(params: {
 
 async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(url);
+    let response: Response;
+    try {
+      response = await fetch(url);
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        const backoff = BASE_DELAY_MS * Math.pow(2, attempt);
+        await delay(backoff);
+        continue;
+      }
+      throw err;
+    }
 
     if (response.ok) {
       return (await response.json()) as LastfmResponse;

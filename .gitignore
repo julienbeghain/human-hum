@@ -38,3 +38,6 @@ npm-debug.log*
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# Dolt internal stats (auto-updated, causes noisy diffs)
+.beads/dolt/.dolt/stats/

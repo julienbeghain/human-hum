@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "with-env": "dotenv -e ../../.env --",
+    "predev": "rm -f .next/dev/lock",
     "dev": "pnpm with-env next dev --turbopack",
     "build": "pnpm with-env next build",
     "start": "pnpm with-env next start",

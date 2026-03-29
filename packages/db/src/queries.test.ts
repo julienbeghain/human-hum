@@ -146,7 +146,7 @@ afterAll(async () => {
 
 describe("getScrobbles", () => {
   it("returns scrobbles with track and artist names", async () => {
-    const rows = await getScrobbles(db);
+    const { rows } = await getScrobbles(db);
     expect(rows.length).toBe(6);
 
     const row = rows.find((r) => r.trackName === "Roygbiv");
@@ -158,14 +158,14 @@ describe("getScrobbles", () => {
   });
 
   it("returns null albumName when scrobble has no album", async () => {
-    const rows = await getScrobbles(db);
+    const { rows } = await getScrobbles(db);
     const row = rows.find((r) => r.trackName === "Windowlicker");
     expect(row).toBeDefined();
     expect(row!.albumName).toBeNull();
   });
 
   it("orders by listenedAt descending by default", async () => {
-    const rows = await getScrobbles(db);
+    const { rows } = await getScrobbles(db);
     for (let i = 1; i < rows.length; i++) {
       expect(rows[i - 1]!.listenedAt.getTime()).toBeGreaterThanOrEqual(
         rows[i]!.listenedAt.getTime(),
@@ -174,7 +174,7 @@ describe("getScrobbles", () => {
   });
 
   it("orders ascending when orderAsc is true", async () => {
-    const rows = await getScrobbles(db, { orderAsc: true });
+    const { rows } = await getScrobbles(db, { orderAsc: true });
     for (let i = 1; i < rows.length; i++) {
       expect(rows[i - 1]!.listenedAt.getTime()).toBeLessThanOrEqual(
         rows[i]!.listenedAt.getTime(),
@@ -182,23 +182,18 @@ describe("getScrobbles", () => {
     }
   });
 
-  it("respects the limit option", async () => {
-    const rows = await getScrobbles(db, { limit: 2 });
-    expect(rows.length).toBe(2);
-  });
-
   it("supports cursor-based pagination", async () => {
-    const first = await getScrobbles(db, { limit: 2 });
-    expect(first.length).toBe(2);
+    const first = await getScrobbles(db, { pageSize: 2 });
+    expect(first.rows.length).toBe(2);
 
     const next = await getScrobbles(db, {
-      limit: 2,
-      cursor: first[1]!.listenedAt,
+      pageSize: 2,
+      cursor: first.rows[1]!.listenedAt,
     });
-    expect(next.length).toBeGreaterThan(0);
-    for (const row of next) {
+    expect(next.rows.length).toBeGreaterThan(0);
+    for (const row of next.rows) {
       expect(row.listenedAt.getTime()).toBeLessThan(
-        first[1]!.listenedAt.getTime(),
+        first.rows[1]!.listenedAt.getTime(),
       );
     }
   });
@@ -206,7 +201,7 @@ describe("getScrobbles", () => {
   it("filters by time range (from and to)", async () => {
     const from = new Date("2025-01-01T00:00:00Z");
     const to = new Date("2026-01-31T23:59:59Z");
-    const rows = await getScrobbles(db, { from, to });
+    const { rows } = await getScrobbles(db, { from, to });
 
     expect(rows.length).toBe(2); // Autechre Bike + Aphex Twin Windowlicker
     for (const row of rows) {
@@ -216,11 +211,50 @@ describe("getScrobbles", () => {
   });
 
   it("filters by source", async () => {
-    const rows = await getScrobbles(db, { source: "spotify" });
+    const { rows } = await getScrobbles(db, { source: "spotify" });
     expect(rows.length).toBe(2);
     for (const row of rows) {
       expect(row.source).toBe("spotify");
     }
+  });
+
+  // --- Offset pagination ---
+
+  it("returns totalCount alongside rows", async () => {
+    const result = await getScrobbles(db);
+    expect(result.totalCount).toBe(6);
+    expect(result.rows.length).toBe(6);
+  });
+
+  it("paginates with page and pageSize", async () => {
+    const page1 = await getScrobbles(db, { page: 1, pageSize: 2 });
+    expect(page1.rows.length).toBe(2);
+    expect(page1.totalCount).toBe(6);
+
+    const page2 = await getScrobbles(db, { page: 2, pageSize: 2 });
+    expect(page2.rows.length).toBe(2);
+    expect(page2.totalCount).toBe(6);
+
+    // Pages should have different rows
+    const page1Ids = page1.rows.map((r) => r.id);
+    const page2Ids = page2.rows.map((r) => r.id);
+    expect(page1Ids).not.toEqual(page2Ids);
+  });
+
+  it("returns empty rows for page beyond data", async () => {
+    const result = await getScrobbles(db, { page: 100, pageSize: 50 });
+    expect(result.rows.length).toBe(0);
+    expect(result.totalCount).toBe(6);
+  });
+
+  it("totalCount respects filters", async () => {
+    const result = await getScrobbles(db, {
+      source: "spotify",
+      page: 1,
+      pageSize: 10,
+    });
+    expect(result.totalCount).toBe(2);
+    expect(result.rows.length).toBe(2);
   });
 });
 

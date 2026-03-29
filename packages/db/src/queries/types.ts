@@ -17,8 +17,9 @@ export type ScrobbleFilter = {
 // --- Scrobble listing ---
 
 export type GetScrobblesParams = ScrobbleFilter & {
-  limit?: number; // default: 50
-  cursor?: Date; // keyset pagination
+  page?: number; // default: 1
+  pageSize?: number; // default: 50
+  cursor?: Date; // keyset pagination (ignored when page is set)
   orderAsc?: boolean; // default: false (newest first)
 };
 
@@ -29,6 +30,11 @@ export type ScrobbleRow = {
   trackName: string;
   artistName: string;
   albumName: string | null;
+};
+
+export type PaginatedScrobbles = {
+  rows: ScrobbleRow[];
+  totalCount: number;
 };
 
 // --- Stats ---

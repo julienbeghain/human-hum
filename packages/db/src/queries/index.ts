@@ -13,6 +13,7 @@ export type {
   GetScrobblesParams,
   GetTimeSeriesParams,
   ListeningClockSlot,
+  PaginatedScrobbles,
   ScrobbleFilter,
   ScrobbleRow,
   ScrobbleStats,

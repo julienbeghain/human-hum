@@ -77,7 +77,8 @@ export async function importScrobbles(
   // Incremental sync: auto-detect `from` unless backfill or explicit `from`
   const paginate = backfill ?? false;
   if (!backfill && !from) {
-    const [latest] = await getScrobbles(db, { limit: 1 });
+    const { rows } = await getScrobbles(db, { pageSize: 1 });
+    const latest = rows[0];
     if (latest) {
       // 1-second overlap — dedup via unique constraint handles duplicates
       from = new Date(latest.listenedAt.getTime() - 1000);
@@ -90,7 +91,8 @@ export async function importScrobbles(
   // Backfill resume: if backfilling with existing data and no explicit `to`,
   // set to = MIN(listened_at) + 1s so we only fetch pages older than what we have
   if (backfill && !to) {
-    const [earliest] = await getScrobbles(db, { limit: 1, orderAsc: true });
+    const { rows: earliestRows } = await getScrobbles(db, { pageSize: 1, orderAsc: true });
+    const earliest = earliestRows[0];
     if (earliest) {
       to = new Date(earliest.listenedAt.getTime() + 1000);
     }

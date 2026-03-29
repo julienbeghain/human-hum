@@ -20,7 +20,7 @@ function formatTimestamp(date: Date): string {
 }
 
 export default async function ScrobblesPage() {
-  const rows = await getScrobbles(db);
+  const { rows } = await getScrobbles(db);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">

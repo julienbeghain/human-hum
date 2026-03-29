@@ -147,3 +147,14 @@
 - `notFound()` from `next/navigation` returns the built-in 404 page — no custom error handling needed
 - Detail page uses `<dl>` (description list) for metadata grid — semantic HTML for key-value pairs
 - Linked track names in scrobbles list to detail page with `<Link href={/scrobbles/${row.id}}>` — no 'use client' needed
+
+## Iteration 15: Extract SourceFetcher interface (human-hum-207)
+
+- Split `importScrobbles` into source-agnostic orchestration (`source-fetcher.ts`) and source-specific fetching (`LastfmFetcher` class)
+- `SourceFetcher` interface: `source` property, `fetchPage()` returns `{ listens, totalPages, skippedCount }`, optional `getRemotePlaycount()`
+- Orchestration handles: incremental sync detection, backfill resume, pagination loop, progress callbacks, completeness check
+- `LastfmFetcher` class encapsulates API key/user, builds URLs, parses LastFM JSON into `ListenInput[]`
+- Skipped/now-playing counting split: `skippedCount` from fetcher (no timestamp), dedup skips counted in orchestrator
+- Re-exported `importScrobbles` from `lastfm.ts` for convenience — CLI wrapper just adds `new LastfmFetcher(apiKey, user)` as second arg
+- Added `./importers/source-fetcher` to package.json exports map for direct access to interface/types
+- No test changes needed — the refactor preserved all behavior, just reorganized code boundaries

@@ -42,8 +42,8 @@ export default function RootLayout({
               <AppSidebar />
               <SidebarInset>
                 <AppHeader />
-                <main className="flex-1">{children}</main>
                 <SyncTrigger />
+                <main className="flex-1">{children}</main>
               </SidebarInset>
             </SidebarProvider>
           </TooltipProvider>

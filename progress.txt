@@ -171,3 +171,14 @@
 - `router.refresh()` called only when new data was actually imported — avoids unnecessary re-renders
 - Re-exported `syncProbe`, `SyncProbeResult`, `NowPlayingTrack` from `lastfm.ts` for convenience imports
 - 5 new tests: no new data, new tracks available, multiple pages, now-playing extraction, empty DB handling
+
+## Iteration 17: Now Playing banner (human-hum-5er)
+
+- Extended `SyncTrigger` to store `nowPlaying` state from `silentSync()` result — no extra API calls
+- `NowPlayingBanner` rendered inline in `SyncTrigger` — avoids prop drilling or context for a simple case
+- Moved `SyncTrigger` from after `<main>` to between `<AppHeader>` and `<main>` so banner appears below header
+- Used `bg-primary/10 text-primary border-primary/20` for theming — adapts to light/dark mode automatically
+- `animate-pulse` on `IconMusic` for visual "now playing" indicator
+- `truncate` on text container prevents layout overflow with long track/artist names
+- Imported `SyncResult` type from server action — Next.js allows type imports from `"use server"` files
+- No new dependencies or shadcn components needed — just Tailwind + Tabler icon

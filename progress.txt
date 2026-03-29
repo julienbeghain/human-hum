@@ -113,3 +113,16 @@
 - Breaking change rippled to: /scrobbles page (destructure `{ rows }`), lastfm importer (destructure + rename `limit` → `pageSize`)
 - `as ScrobbleRow[]` cast needed because Drizzle's select with joins infers a wider union type
 - 4 new tests: totalCount alongside rows, page/pageSize pagination, empty page beyond data, totalCount respects filters
+
+## Iteration 12: App shell with collapsible sidebar (human-hum-ti9)
+
+- Created AppSidebar component with sidebar-07 pattern: collapsible="icon", SidebarRail for resize
+- Flat nav items (Scrobbles, Artists, Albums, Stats) with Tabler icons, active state from usePathname()
+- Header branding uses SidebarMenuButton size="lg" with render={<Link>} for polymorphic rendering
+- Mock user footer with Avatar + DropdownMenu; DropdownMenuTrigger render={<SidebarMenuButton>} pattern
+- AppHeader component with SidebarTrigger + Breadcrumb; pageTitles lookup from pathname
+- Root layout wraps: ThemeProvider > TooltipProvider > SidebarProvider > AppSidebar + SidebarInset
+- base-ui uses `render` prop, NOT `asChild` — SidebarMenuButton, Button, DropdownMenuTrigger all use render={<Component />}
+- IconChevronsUpDown doesn't exist in @tabler/icons-react — use IconSelector instead
+- Removed standalone h1 from /scrobbles page (breadcrumbs handle page title now)
+- pnpm format touches many files via prettier — only stage files relevant to the task

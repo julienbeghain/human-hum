@@ -102,3 +102,14 @@
 - Coverage will never be 100% — LastFM counts "now playing" entries and deleted tracks in playcount
 - Backfill resume only activates when `to` is not explicitly set — explicit `to` takes precedence
 - `let { from, to } = options` — destructuring with `let` allows reassignment in the function body
+
+## Iteration 11: Offset pagination for getScrobbles (human-hum-asg)
+
+- Changed getScrobbles return type from `ScrobbleRow[]` to `{ rows: ScrobbleRow[], totalCount: number }`
+- Replaced `limit` param with `page` (default 1) and `pageSize` (default 50)
+- Parallel COUNT(*) query via Promise.all for totalCount — same joins and WHERE clause as main query
+- Extracted `baseQuery()` and `countQuery()` helpers to DRY up the shared join chain
+- Cursor-based pagination still works alongside offset pagination (cursor adds a WHERE condition)
+- Breaking change rippled to: /scrobbles page (destructure `{ rows }`), lastfm importer (destructure + rename `limit` → `pageSize`)
+- `as ScrobbleRow[]` cast needed because Drizzle's select with joins infers a wider union type
+- 4 new tests: totalCount alongside rows, page/pageSize pagination, empty page beyond data, totalCount respects filters

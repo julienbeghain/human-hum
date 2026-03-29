@@ -1,130 +1,79 @@
-import type { Database } from "../index";
-import { recordListen, type Source } from "../ingestion";
-import { getScrobbles, getStats } from "../queries";
+import type { ListenInput, Source } from "../ingestion"
+import type { FetchPageParams, FetchPageResult, SourceFetcher } from "./source-fetcher"
+
+// Re-export orchestration for convenience
+export { importScrobbles } from "./source-fetcher"
+export type {
+  CompletenessResult,
+  ImportOptions,
+  ImportResult,
+  PageProgress,
+} from "./source-fetcher"
 
 // --- LastFM API types ---
 
 interface LastfmTrack {
-  name: string;
-  mbid: string;
-  artist: { "#text": string; mbid: string };
-  album: { "#text": string; mbid: string };
-  date?: { uts: string };
-  "@attr"?: { nowplaying: string };
+  name: string
+  mbid: string
+  artist: { "#text": string; mbid: string }
+  album: { "#text": string; mbid: string }
+  date?: { uts: string }
+  "@attr"?: { nowplaying: string }
 }
 
 interface LastfmResponse {
   recenttracks: {
-    track: LastfmTrack[];
+    track: LastfmTrack[]
     "@attr": {
-      total: string;
-      page: string;
-      perPage: string;
-      totalPages: string;
-    };
-  };
-}
-
-// --- Public API ---
-
-export interface ImportOptions {
-  apiKey: string;
-  user: string;
-  from?: Date;
-  to?: Date;
-  /** Paginate through all pages (200 tracks/page). Default: single page of 50. */
-  backfill?: boolean;
-  onProgress?: (progress: PageProgress) => void;
-}
-
-export interface PageProgress {
-  page: number;
-  totalPages: number;
-  imported: number;
-  skipped: number;
-}
-
-export interface ImportResult {
-  totalImported: number;
-  totalSkipped: number;
-  pagesProcessed: number;
-  completeness?: CompletenessResult;
-}
-
-export interface CompletenessResult {
-  localCount: number;
-  remotePlaycount: number;
-  coveragePercent: number;
-}
-
-const BASE_DELAY_MS = 200;
-const MAX_RETRIES = 5;
-
-/**
- * Import scrobbles from LastFM into the database.
- *
- * - Default (no flags): incremental sync — fetches from MAX(listened_at)-1s,
- *   paginates through all new scrobbles. Falls back to full backfill on empty DB.
- * - backfill=true: full backfill, paginates all pages (200/page, newest-first).
- */
-export async function importScrobbles(
-  db: Database,
-  options: ImportOptions,
-): Promise<ImportResult> {
-  const { apiKey, user, backfill, onProgress } = options;
-  let { from, to } = options;
-
-  // Incremental sync: auto-detect `from` unless backfill or explicit `from`
-  const paginate = backfill ?? false;
-  if (!backfill && !from) {
-    const { rows } = await getScrobbles(db, { pageSize: 1 });
-    const latest = rows[0];
-    if (latest) {
-      // 1-second overlap — dedup via unique constraint handles duplicates
-      from = new Date(latest.listenedAt.getTime() - 1000);
-    } else {
-      // Empty DB — fall back to full backfill behavior
-      return importScrobbles(db, { ...options, backfill: true });
+      total: string
+      page: string
+      perPage: string
+      totalPages: string
     }
   }
+}
 
-  // Backfill resume: if backfilling with existing data and no explicit `to`,
-  // set to = MIN(listened_at) + 1s so we only fetch pages older than what we have
-  if (backfill && !to) {
-    const { rows: earliestRows } = await getScrobbles(db, { pageSize: 1, orderAsc: true });
-    const earliest = earliestRows[0];
-    if (earliest) {
-      to = new Date(earliest.listenedAt.getTime() + 1000);
-    }
-  }
+interface LastfmUserInfo {
+  user: { playcount: string }
+}
 
-  // Backfill and incremental sync both paginate at 200/page
-  const limit = paginate || from ? 200 : 50;
+// --- LastfmFetcher ---
 
-  let totalImported = 0;
-  let totalSkipped = 0;
-  let pagesProcessed = 0;
-  let currentPage = 1;
-  let totalPages = 1;
+const BASE_DELAY_MS = 200
+const MAX_RETRIES = 5
 
-  do {
-    const url = buildUrl({ apiKey, user, from, to, limit, page: currentPage });
-    const data = await fetchWithRetry(url);
+export class LastfmFetcher implements SourceFetcher {
+  readonly source: Source = "lastfm"
 
-    const pageTracks = data.recenttracks.track;
-    const attrs = data.recenttracks["@attr"];
-    totalPages = parseInt(attrs.totalPages, 10);
+  constructor(
+    private readonly apiKey: string,
+    private readonly user: string
+  ) {}
 
-    let pageImported = 0;
-    let pageSkipped = 0;
+  async fetchPage(params: FetchPageParams): Promise<FetchPageResult> {
+    const url = buildUrl({
+      apiKey: this.apiKey,
+      user: this.user,
+      from: params.from,
+      to: params.to,
+      limit: params.pageSize,
+      page: params.page,
+    })
+
+    const data = await fetchWithRetry(url)
+    const pageTracks = data.recenttracks.track
+    const totalPages = parseInt(data.recenttracks["@attr"].totalPages, 10)
+
+    const listens: ListenInput[] = []
+    let skippedCount = 0
 
     for (const t of pageTracks) {
       if (t["@attr"]?.nowplaying === "true" || !t.date) {
-        pageSkipped++;
-        continue;
+        skippedCount++
+        continue
       }
 
-      const result = await recordListen(db, {
+      listens.push({
         artist: {
           name: t.artist["#text"],
           mbid: t.artist.mbid || undefined,
@@ -135,140 +84,90 @@ export async function importScrobbles(
         track: { name: t.name, mbid: t.mbid || undefined },
         listenedAt: new Date(parseInt(t.date.uts, 10) * 1000),
         source: "lastfm" satisfies Source,
-      });
-
-      if (result.wasNew) pageImported++;
-      else pageSkipped++;
+      })
     }
 
-    totalImported += pageImported;
-    totalSkipped += pageSkipped;
-    pagesProcessed++;
-
-    onProgress?.({
-      page: currentPage,
-      totalPages,
-      imported: pageImported,
-      skipped: pageSkipped,
-    });
-
-    currentPage++;
-
-    if (currentPage <= totalPages) {
-      await delay(BASE_DELAY_MS);
-    }
-  } while (currentPage <= totalPages);
-
-  // After backfill, check completeness against LastFM playcount
-  let completeness: CompletenessResult | undefined;
-  if (backfill) {
-    completeness = await checkCompleteness(db, apiKey, user);
+    return { listens, totalPages, skippedCount }
   }
 
-  return { totalImported, totalSkipped, pagesProcessed, completeness };
+  async getRemotePlaycount(): Promise<number> {
+    const url = new URL("https://ws.audioscrobbler.com/2.0/")
+    url.searchParams.set("method", "user.getInfo")
+    url.searchParams.set("user", this.user)
+    url.searchParams.set("api_key", this.apiKey)
+    url.searchParams.set("format", "json")
+
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(
+        `LastFM user.getInfo error: ${response.status} ${response.statusText}`
+      )
+    }
+    const data = (await response.json()) as LastfmUserInfo
+    return parseInt(data.user.playcount, 10)
+  }
 }
 
 // --- Helpers ---
 
 function buildUrl(params: {
-  apiKey: string;
-  user: string;
-  from?: Date;
-  to?: Date;
-  limit: number;
-  page: number;
+  apiKey: string
+  user: string
+  from?: Date
+  to?: Date
+  limit: number
+  page: number
 }): URL {
-  const url = new URL("https://ws.audioscrobbler.com/2.0/");
-  url.searchParams.set("method", "user.getRecentTracks");
-  url.searchParams.set("user", params.user);
-  url.searchParams.set("api_key", params.apiKey);
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", params.limit.toString());
-  url.searchParams.set("page", params.page.toString());
+  const url = new URL("https://ws.audioscrobbler.com/2.0/")
+  url.searchParams.set("method", "user.getRecentTracks")
+  url.searchParams.set("user", params.user)
+  url.searchParams.set("api_key", params.apiKey)
+  url.searchParams.set("format", "json")
+  url.searchParams.set("limit", params.limit.toString())
+  url.searchParams.set("page", params.page.toString())
 
-  if (params.from) url.searchParams.set("from", unixSeconds(params.from));
-  if (params.to) url.searchParams.set("to", unixSeconds(params.to));
+  if (params.from) url.searchParams.set("from", unixSeconds(params.from))
+  if (params.to) url.searchParams.set("to", unixSeconds(params.to))
 
-  return url;
+  return url
 }
 
 async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    let response: Response;
+    let response: Response
     try {
-      response = await fetch(url);
+      response = await fetch(url)
     } catch (err) {
       if (attempt < MAX_RETRIES) {
-        const backoff = BASE_DELAY_MS * Math.pow(2, attempt);
-        await delay(backoff);
-        continue;
+        const backoff = BASE_DELAY_MS * Math.pow(2, attempt)
+        await delay(backoff)
+        continue
       }
-      throw err;
+      throw err
     }
 
     if (response.ok) {
-      return (await response.json()) as LastfmResponse;
+      return (await response.json()) as LastfmResponse
     }
 
     if (response.status === 429 && attempt < MAX_RETRIES) {
-      const backoff = BASE_DELAY_MS * Math.pow(2, attempt);
-      await delay(backoff);
-      continue;
+      const backoff = BASE_DELAY_MS * Math.pow(2, attempt)
+      await delay(backoff)
+      continue
     }
 
     throw new Error(
-      `LastFM API error: ${response.status} ${response.statusText}`,
-    );
+      `LastFM API error: ${response.status} ${response.statusText}`
+    )
   }
 
-  throw new Error("LastFM API: max retries exceeded");
+  throw new Error("LastFM API: max retries exceeded")
 }
 
 function unixSeconds(date: Date): string {
-  return Math.floor(date.getTime() / 1000).toString();
-}
-
-async function checkCompleteness(
-  db: Database,
-  apiKey: string,
-  user: string,
-): Promise<CompletenessResult> {
-  const [stats, remotePlaycount] = await Promise.all([
-    getStats(db),
-    fetchUserPlaycount(apiKey, user),
-  ]);
-  const localCount = stats.total;
-  const coveragePercent =
-    remotePlaycount > 0
-      ? Math.round((localCount / remotePlaycount) * 10000) / 100
-      : 100;
-  return { localCount, remotePlaycount, coveragePercent };
-}
-
-interface LastfmUserInfo {
-  user: { playcount: string };
-}
-
-async function fetchUserPlaycount(
-  apiKey: string,
-  user: string,
-): Promise<number> {
-  const url = new URL("https://ws.audioscrobbler.com/2.0/");
-  url.searchParams.set("method", "user.getInfo");
-  url.searchParams.set("user", user);
-  url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("format", "json");
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(
-      `LastFM user.getInfo error: ${response.status} ${response.statusText}`,
-    );
-  }
-  const data = (await response.json()) as LastfmUserInfo;
-  return parseInt(data.user.playcount, 10);
+  return Math.floor(date.getTime() / 1000).toString()
 }
 
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

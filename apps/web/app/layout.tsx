@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarInset } from "@workspace/ui/components/sidebar"
 import { cn } from "@workspace/ui/lib/utils"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
+import { SyncTrigger } from "@/components/sync-trigger"
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -42,6 +43,7 @@ export default function RootLayout({
               <SidebarInset>
                 <AppHeader />
                 <main className="flex-1">{children}</main>
+                <SyncTrigger />
               </SidebarInset>
             </SidebarProvider>
           </TooltipProvider>

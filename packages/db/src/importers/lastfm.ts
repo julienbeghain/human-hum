@@ -1,13 +1,20 @@
 import type { ListenInput, Source } from "../ingestion"
-import type { FetchPageParams, FetchPageResult, SourceFetcher } from "./source-fetcher"
+import type {
+  FetchPageParams,
+  FetchPageResult,
+  NowPlayingTrack,
+  SourceFetcher,
+} from "./source-fetcher"
 
 // Re-export orchestration for convenience
-export { importScrobbles } from "./source-fetcher"
+export { importScrobbles, syncProbe } from "./source-fetcher"
 export type {
   CompletenessResult,
   ImportOptions,
   ImportResult,
+  NowPlayingTrack,
   PageProgress,
+  SyncProbeResult,
 } from "./source-fetcher"
 
 // --- LastFM API types ---
@@ -66,10 +73,18 @@ export class LastfmFetcher implements SourceFetcher {
 
     const listens: ListenInput[] = []
     let skippedCount = 0
+    let nowPlaying: NowPlayingTrack | undefined
 
     for (const t of pageTracks) {
       if (t["@attr"]?.nowplaying === "true" || !t.date) {
         skippedCount++
+        if (t["@attr"]?.nowplaying === "true") {
+          nowPlaying = {
+            trackName: t.name,
+            artistName: t.artist["#text"],
+            albumName: t.album["#text"] || undefined,
+          }
+        }
         continue
       }
 
@@ -87,7 +102,7 @@ export class LastfmFetcher implements SourceFetcher {
       })
     }
 
-    return { listens, totalPages, skippedCount }
+    return { listens, totalPages, skippedCount, nowPlaying }
   }
 
   async getRemotePlaycount(): Promise<number> {

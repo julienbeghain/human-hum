@@ -4,12 +4,21 @@ import { getScrobbles, getStats } from "../queries"
 
 // --- SourceFetcher interface ---
 
+/** Track currently being listened to (no timestamp). */
+export interface NowPlayingTrack {
+  trackName: string
+  artistName: string
+  albumName?: string
+}
+
 /** Result of fetching a single page from a music source. */
 export interface FetchPageResult {
   listens: ListenInput[]
   totalPages: number
   /** Entries skipped (e.g. "now playing" with no timestamp). */
   skippedCount: number
+  /** Currently playing track, if any. */
+  nowPlaying?: NowPlayingTrack
 }
 
 export interface FetchPageParams {
@@ -58,6 +67,47 @@ export interface CompletenessResult {
   localCount: number
   remotePlaycount: number
   coveragePercent: number
+}
+
+// --- Sync probe types ---
+
+export interface SyncProbeResult {
+  needsSync: boolean
+  /** Number of new tracks available from the source. */
+  newTrackCount: number
+  nowPlaying: NowPlayingTrack | null
+}
+
+// --- Sync probe ---
+
+/**
+ * Lightweight check: are there new scrobbles to import?
+ *
+ * Queries the latest local timestamp, then fetches one track from the source
+ * with `from = latest - 1s`. The response's `totalPages` (at pageSize=1)
+ * equals the number of new tracks. Also extracts now-playing info.
+ */
+export async function syncProbe(
+  db: Database,
+  fetcher: SourceFetcher
+): Promise<SyncProbeResult> {
+  const { rows } = await getScrobbles(db, { pageSize: 1 })
+  const latest = rows[0]
+
+  const from = latest
+    ? new Date(latest.listenedAt.getTime() - 1000)
+    : undefined
+
+  const result = await fetcher.fetchPage({ page: 1, pageSize: 1, from })
+
+  // When there's no local data, totalPages is the full history count
+  const newTrackCount = result.totalPages
+
+  return {
+    needsSync: newTrackCount > 0 && result.listens.length > 0,
+    newTrackCount,
+    nowPlaying: result.nowPlaying ?? null,
+  }
 }
 
 // --- Orchestration ---

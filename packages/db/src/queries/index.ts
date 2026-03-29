@@ -1,8 +1,8 @@
-export { getAlbumDetail } from "./albums";
-export { getArtistDetail, getArtistRankings } from "./artists";
-export { getScrobbles } from "./scrobbles";
-export { getStats } from "./stats";
-export { getListeningClock, getTimeSeries } from "./time-series";
+export { getAlbumDetail } from "./albums"
+export { getArtistDetail, getArtistRankings } from "./artists"
+export { getScrobbleById, getScrobbles } from "./scrobbles"
+export { getStats } from "./stats"
+export { getListeningClock, getTimeSeries } from "./time-series"
 export type {
   AlbumDetail,
   ArtistDetail,
@@ -14,10 +14,11 @@ export type {
   GetTimeSeriesParams,
   ListeningClockSlot,
   PaginatedScrobbles,
+  ScrobbleDetail,
   ScrobbleFilter,
   ScrobbleRow,
   ScrobbleStats,
   Source,
   TimeSeriesBucket,
   TimeSeriesPeriod,
-} from "./types";
+} from "./types"

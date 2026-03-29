@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { db } from "@workspace/db"
 import { getScrobbles } from "@workspace/db/queries"
 import {
@@ -108,7 +110,14 @@ export default async function ScrobblesPage(props: {
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell>{row.trackName}</TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/scrobbles/${row.id}`}
+                      className="hover:underline"
+                    >
+                      {row.trackName}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {row.artistName}
                   </TableCell>
@@ -125,7 +134,7 @@ export default async function ScrobblesPage(props: {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 {totalCount.toLocaleString()} scrobbles
               </p>
               <Pagination>

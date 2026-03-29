@@ -1,109 +1,117 @@
-import type * as schema from "../schema";
+import type * as schema from "../schema"
 
-export type Source = (typeof schema.sourceEnum.enumValues)[number];
+export type Source = (typeof schema.sourceEnum.enumValues)[number]
 
 // --- Shared filter applied to every query ---
 
 export type ScrobbleFilter = {
-  userId?: number; // Phase 6
-  from?: Date;
-  to?: Date;
-  source?: Source;
-  artistId?: number;
-  albumId?: number;
-  trackId?: number;
-};
+  userId?: number // Phase 6
+  from?: Date
+  to?: Date
+  source?: Source
+  artistId?: number
+  albumId?: number
+  trackId?: number
+}
 
 // --- Scrobble listing ---
 
 export type GetScrobblesParams = ScrobbleFilter & {
-  page?: number; // default: 1
-  pageSize?: number; // default: 50
-  cursor?: Date; // keyset pagination (ignored when page is set)
-  orderAsc?: boolean; // default: false (newest first)
-};
+  page?: number // default: 1
+  pageSize?: number // default: 50
+  cursor?: Date // keyset pagination (ignored when page is set)
+  orderAsc?: boolean // default: false (newest first)
+}
 
 export type ScrobbleRow = {
-  id: number;
-  listenedAt: Date;
-  source: Source;
-  trackName: string;
-  artistName: string;
-  albumName: string | null;
-};
+  id: number
+  listenedAt: Date
+  source: Source
+  trackName: string
+  artistName: string
+  albumName: string | null
+}
 
 export type PaginatedScrobbles = {
-  rows: ScrobbleRow[];
-  totalCount: number;
-};
+  rows: ScrobbleRow[]
+  totalCount: number
+}
+
+export type ScrobbleDetail = ScrobbleRow & {
+  trackId: number
+  artistId: number
+  albumId: number | null
+  trackPlayCount: number
+  artistPlayCount: number
+}
 
 // --- Stats ---
 
 export type ScrobbleStats = {
-  total: number;
-  earliest: Date | null;
-  latest: Date | null;
-  uniqueArtists: number;
-  uniqueTracks: number;
-  uniqueAlbums: number;
-};
+  total: number
+  earliest: Date | null
+  latest: Date | null
+  uniqueArtists: number
+  uniqueTracks: number
+  uniqueAlbums: number
+}
 
 // --- Rankings ---
 
 export type GetArtistRankingsParams = ScrobbleFilter & {
-  topN?: number; // default: 50
-};
+  topN?: number // default: 50
+}
 
 export type ArtistRanking = {
-  artistId: number;
-  artistName: string;
-  playCount: number;
-};
+  artistId: number
+  artistName: string
+  playCount: number
+}
 
 // --- Artist detail ---
 
 export type GetArtistDetailParams = ScrobbleFilter & {
-  artistId: number;
-};
+  artistId: number
+}
 
 export type ArtistDetail = {
-  artistId: number;
-  artistName: string;
-  playCount: number;
-  topTracks: { trackId: number; trackName: string; playCount: number }[];
-  topAlbums: { albumId: number; albumName: string; playCount: number }[];
-};
+  artistId: number
+  artistName: string
+  playCount: number
+  topTracks: { trackId: number; trackName: string; playCount: number }[]
+  topAlbums: { albumId: number; albumName: string; playCount: number }[]
+}
 
 // --- Album detail ---
 
 export type GetAlbumDetailParams = ScrobbleFilter & {
-  albumId: number;
-};
+  albumId: number
+}
 
 export type AlbumDetail = {
-  albumId: number;
-  albumName: string;
-  artistName: string;
-  playCount: number;
-  tracks: { trackId: number; trackName: string; playCount: number }[];
-};
+  albumId: number
+  albumName: string
+  artistName: string
+  playCount: number
+  tracks: { trackId: number; trackName: string; playCount: number }[]
+}
 
 // --- Time series ---
 
-export type TimeSeriesPeriod = "day" | "week" | "month" | "year";
+export type TimeSeriesPeriod = "day" | "week" | "month" | "year"
 
 export type GetTimeSeriesParams = ScrobbleFilter & {
-  period: TimeSeriesPeriod;
-};
+  period: TimeSeriesPeriod
+}
 
 export type TimeSeriesBucket = {
-  period: Date;
-  count: number;
-};
+  period: Date
+  count: number
+}
 
 // --- Listening clock ---
 
 export type ListeningClockSlot = {
-  hour: number;
-  count: number;
-};
+  hour: number
+  count: number
+}

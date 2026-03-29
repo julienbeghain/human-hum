@@ -25,34 +25,40 @@ function getFetcher(): { db: ReturnType<typeof createDb>; fetcher: LastfmFetcher
   }
 }
 
+export type ProbeResult =
+  | { probed: false }
+  | {
+      probed: true
+      needsSync: boolean
+      newTrackCount: number
+      nowPlaying: NowPlayingTrack | null
+    }
+
 export type SyncResult = {
-  probed: false
-} | {
-  probed: true
-  needsSync: boolean
   imported: number
-  nowPlaying: NowPlayingTrack | null
 }
 
-export async function silentSync(): Promise<SyncResult> {
+export async function probeSync(): Promise<ProbeResult> {
   const env = getFetcher()
   if (!env) return { probed: false }
 
   const { db, fetcher } = env
-
   const probe: SyncProbeResult = await syncProbe(db, fetcher)
-
-  if (!probe.needsSync) {
-    return { probed: true, needsSync: false, imported: 0, nowPlaying: probe.nowPlaying }
-  }
-
-  // Run incremental import (no backfill flag = sync from latest)
-  const result = await importScrobbles(db, fetcher, {})
 
   return {
     probed: true,
-    needsSync: true,
-    imported: result.totalImported,
+    needsSync: probe.needsSync,
+    newTrackCount: probe.newTrackCount,
     nowPlaying: probe.nowPlaying,
   }
+}
+
+export async function runSync(): Promise<SyncResult> {
+  const env = getFetcher()
+  if (!env) return { imported: 0 }
+
+  const { db, fetcher } = env
+  const result = await importScrobbles(db, fetcher, {})
+
+  return { imported: result.totalImported }
 }

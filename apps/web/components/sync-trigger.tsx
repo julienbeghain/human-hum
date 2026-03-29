@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { IconMusic } from "@tabler/icons-react"
+import { Spinner } from "@workspace/ui/components/spinner"
 
-import { silentSync, type SyncResult } from "@/app/actions/sync"
+import { probeSync, runSync, type ProbeResult } from "@/app/actions/sync"
 
 interface NowPlaying {
   trackName: string
@@ -17,25 +18,51 @@ export function SyncTrigger() {
   const [, startTransition] = useTransition()
   const hasRun = useRef(false)
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     if (hasRun.current) return
     hasRun.current = true
 
     startTransition(async () => {
-      const result: SyncResult = await silentSync()
-      if (result.probed) {
-        setNowPlaying(result.nowPlaying ?? null)
-        if (result.needsSync && result.imported > 0) {
-          router.refresh()
-        }
+      const probe: ProbeResult = await probeSync()
+      if (!probe.probed) return
+
+      setNowPlaying(probe.nowPlaying ?? null)
+
+      if (!probe.needsSync) return
+
+      // Show syncing indicator for multi-page catch-ups
+      if (probe.newTrackCount > 1) {
+        setSyncing(true)
+      }
+
+      const result = await runSync()
+
+      setSyncing(false)
+      if (result.imported > 0) {
+        router.refresh()
       }
     })
   }, [router, startTransition])
 
-  if (!nowPlaying) return null
+  return (
+    <>
+      {syncing && <SyncingBanner />}
+      {nowPlaying && <NowPlayingBanner {...nowPlaying} />}
+    </>
+  )
+}
 
-  return <NowPlayingBanner {...nowPlaying} />
+function SyncingBanner() {
+  return (
+    <div className="bg-muted flex items-center gap-3 border-b px-4 py-2 text-sm">
+      <Spinner className="size-4 shrink-0" />
+      <span className="text-muted-foreground">
+        Syncing your latest scrobbles&hellip;
+      </span>
+    </div>
+  )
 }
 
 function NowPlayingBanner({

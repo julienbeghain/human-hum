@@ -182,3 +182,13 @@
 - `truncate` on text container prevents layout overflow with long track/artist names
 - Imported `SyncResult` type from server action — Next.js allows type imports from `"use server"` files
 - No new dependencies or shadcn components needed — just Tailwind + Tabler icon
+
+## Iteration 18: Syncing indicator for catch-up sync (human-hum-n5p)
+
+- Split `silentSync()` into `probeSync()` + `runSync()` server actions — probe returns fast, sync runs separately
+- Client calls probe first, shows `SyncingBanner` if `newTrackCount > 1`, then calls runSync
+- `SyncingBanner` uses existing `Spinner` component from `@workspace/ui` — no new dependencies
+- Banner dismisses when sync completes; `router.refresh()` only fires if `imported > 0`
+- `SyncResult` type simplified to just `{ imported: number }` since probe result is now separate
+- New `ProbeResult` type includes `newTrackCount` from `SyncProbeResult` for client-side decision making
+- Both banners (syncing + now playing) can coexist — syncing shows above now playing via fragment ordering

@@ -8,7 +8,7 @@ export default function Page() {
         <div>
           <h1 className="font-medium">Welcome to Human Hum</h1>
           <p>Your personal music scrobbling platform.</p>
-          <Button className="mt-2" render={<Link href="/scrobbles" />}>
+          <Button className="mt-2" nativeButton={false} render={<Link href="/scrobbles" />}>
             View Scrobbles
           </Button>
         </div>

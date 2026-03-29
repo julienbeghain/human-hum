@@ -10,7 +10,11 @@ import {
 
 import { cn } from "@workspace/ui/lib/utils"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
-import { IconChevronLeft, IconChevronRight, IconChevronDown } from "@tabler/icons-react"
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronDown,
+} from "@tabler/icons-react"
 
 function Calendar({
   className,
@@ -153,7 +157,10 @@ function Calendar({
 
           if (orientation === "right") {
             return (
-              <IconChevronRight className={cn("size-4", className)} {...props} />
+              <IconChevronRight
+                className={cn("size-4", className)}
+                {...props}
+              />
             )
           }
 

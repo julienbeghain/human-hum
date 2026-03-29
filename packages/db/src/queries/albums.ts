@@ -1,17 +1,17 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm"
 
-import type { Database } from "../index";
-import * as schema from "../schema";
-import { buildFilterConditions } from "./filter";
-import type { AlbumDetail, GetAlbumDetailParams } from "./types";
+import type { Database } from "../index"
+import * as schema from "../schema"
+import { buildFilterConditions } from "./filter"
+import type { AlbumDetail, GetAlbumDetailParams } from "./types"
 
 export async function getAlbumDetail(
   db: Database,
-  params: GetAlbumDetailParams,
+  params: GetAlbumDetailParams
 ): Promise<AlbumDetail | null> {
-  const { albumId, ...filter } = params;
-  const conditions = buildFilterConditions(filter);
-  conditions.push(eq(schema.scrobbles.albumId, albumId));
+  const { albumId, ...filter } = params
+  const conditions = buildFilterConditions(filter)
+  conditions.push(eq(schema.scrobbles.albumId, albumId))
 
   // Album info + total play count
   const [album] = await db
@@ -25,9 +25,9 @@ export async function getAlbumDetail(
     .innerJoin(schema.albums, eq(schema.scrobbles.albumId, schema.albums.id))
     .innerJoin(schema.artists, eq(schema.albums.artistId, schema.artists.id))
     .where(and(...conditions))
-    .groupBy(schema.albums.id, schema.albums.name, schema.artists.name);
+    .groupBy(schema.albums.id, schema.albums.name, schema.artists.name)
 
-  if (!album) return null;
+  if (!album) return null
 
   // Track listing with play counts
   const tracks = await db
@@ -40,7 +40,7 @@ export async function getAlbumDetail(
     .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
     .where(and(...conditions))
     .groupBy(schema.tracks.id, schema.tracks.name)
-    .orderBy(desc(count(schema.scrobbles.id)));
+    .orderBy(desc(count(schema.scrobbles.id)))
 
-  return { ...album, tracks };
+  return { ...album, tracks }
 }

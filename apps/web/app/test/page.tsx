@@ -1,14 +1,30 @@
 import { Button } from "@workspace/ui/components/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Badge } from "@workspace/ui/components/badge"
 import { Switch } from "@workspace/ui/components/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@workspace/ui/components/tabs"
 import { Separator } from "@workspace/ui/components/separator"
 import { Checkbox } from "@workspace/ui/components/checkbox"
 import { Slider } from "@workspace/ui/components/slider"
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 
 export default function TestPage() {
   return (
@@ -16,7 +32,9 @@ export default function TestPage() {
       <div className="flex w-full max-w-2xl flex-col gap-8">
         <div>
           <h1 className="text-2xl font-bold">Component Test Page</h1>
-          <p className="text-muted-foreground text-sm">A sampler of shadcn components.</p>
+          <p className="text-sm text-muted-foreground">
+            A sampler of shadcn components.
+          </p>
         </div>
 
         <Alert>
@@ -53,7 +71,11 @@ export default function TestPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                  />
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">

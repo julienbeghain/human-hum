@@ -1,32 +1,32 @@
-import { and, eq } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import type { SQL } from "drizzle-orm";
+import { and, eq } from "drizzle-orm"
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core"
+import type { SQL } from "drizzle-orm"
 
-import type { Database } from "./index";
-import * as schema from "./schema";
+import type { Database } from "./index"
+import * as schema from "./schema"
 
-export type Source = (typeof schema.sourceEnum.enumValues)[number];
+export type Source = (typeof schema.sourceEnum.enumValues)[number]
 
 export interface ListenInput {
-  artist: { name: string; mbid?: string };
-  album?: { name: string; mbid?: string };
-  track: { name: string; mbid?: string };
-  listenedAt: Date;
-  source: Source;
+  artist: { name: string; mbid?: string }
+  album?: { name: string; mbid?: string }
+  track: { name: string; mbid?: string }
+  listenedAt: Date
+  source: Source
 }
 
 export interface ScrobbleResult {
-  scrobbleId: number;
-  trackId: number;
-  artistId: number;
-  albumId: number | null;
-  wasNew: boolean;
+  scrobbleId: number
+  trackId: number
+  artistId: number
+  albumId: number | null
+  wasNew: boolean
 }
 
 // --- Private helpers ---
 
 function normalizeMbid(mbid?: string): string | null {
-  return mbid && mbid.length > 0 ? mbid : null;
+  return mbid && mbid.length > 0 ? mbid : null
 }
 
 /**
@@ -38,82 +38,82 @@ async function resolveEntity(
   table: PgTable,
   idColumn: PgColumn,
   conditions: SQL[],
-  values: Record<string, unknown>,
+  values: Record<string, unknown>
 ): Promise<number> {
   // 1. Try to find existing
   const existing = await db
     .select({ id: idColumn })
     .from(table)
     .where(and(...conditions))
-    .limit(1);
+    .limit(1)
 
-  if (existing[0]) return existing[0].id as number;
+  if (existing[0]) return existing[0].id as number
 
   // 2. Try to insert
   const inserted = await db
     .insert(table)
     .values(values)
     .onConflictDoNothing()
-    .returning({ id: idColumn });
+    .returning({ id: idColumn })
 
-  if (inserted[0]) return inserted[0].id as number;
+  if (inserted[0]) return inserted[0].id as number
 
   // 3. Race condition: another process inserted between our select and insert
   const refetch = await db
     .select({ id: idColumn })
     .from(table)
     .where(and(...conditions))
-    .limit(1);
+    .limit(1)
 
   if (!refetch[0]) {
     throw new Error(
-      `Entity resolution failed for ${table._.name}: ${JSON.stringify(values)}`,
-    );
+      `Entity resolution failed for ${table._.name}: ${JSON.stringify(values)}`
+    )
   }
 
-  return refetch[0].id as number;
+  return refetch[0].id as number
 }
 
 // --- Public API ---
 
 export async function recordListen(
   db: Database,
-  input: ListenInput,
+  input: ListenInput
 ): Promise<ScrobbleResult> {
-  const { artists, albums, tracks, scrobbles } = schema;
+  const { artists, albums, tracks, scrobbles } = schema
 
   // Resolve artist (unique on name only — mbid stored but not part of identity)
-  const artistMbid = normalizeMbid(input.artist.mbid);
+  const artistMbid = normalizeMbid(input.artist.mbid)
   const artistId = await resolveEntity(
     db,
     artists,
     artists.id,
     [eq(artists.name, input.artist.name)],
-    { name: input.artist.name, mbid: artistMbid },
-  );
+    { name: input.artist.name, mbid: artistMbid }
+  )
 
   // Resolve album (optional)
-  let albumId: number | null = null;
+  let albumId: number | null = null
   if (input.album) {
-    const albumMbid = normalizeMbid(input.album.mbid);
+    const albumMbid = normalizeMbid(input.album.mbid)
     albumId = await resolveEntity(
       db,
       albums,
       albums.id,
       [eq(albums.name, input.album.name), eq(albums.artistId, artistId)],
-      { name: input.album.name, mbid: albumMbid, artistId },
-    );
+      { name: input.album.name, mbid: albumMbid, artistId }
+    )
   }
 
   // Resolve track (unique on name + artist_id only)
-  const trackMbid = normalizeMbid(input.track.mbid);
+  const trackMbid = normalizeMbid(input.track.mbid)
   const trackId = await resolveEntity(
     db,
     tracks,
     tracks.id,
     [eq(tracks.name, input.track.name), eq(tracks.artistId, artistId)],
-    { name: input.track.name, mbid: trackMbid, artistId },
-  );
+    { name: input.track.name, mbid: trackMbid, artistId }
+  )
 
   // Insert scrobble
   const inserted = await db
@@ -125,12 +125,12 @@ export async function recordListen(
       source: input.source,
     })
     .onConflictDoNothing()
-    .returning({ id: scrobbles.id });
+    .returning({ id: scrobbles.id })
 
-  const wasNew = inserted.length > 0;
-  let scrobbleId: number;
+  const wasNew = inserted.length > 0
+  let scrobbleId: number
   if (wasNew) {
-    scrobbleId = inserted[0]!.id;
+    scrobbleId = inserted[0]!.id
   } else {
     const existing = await db
       .select({ id: scrobbles.id })
@@ -138,15 +138,17 @@ export async function recordListen(
       .where(
         and(
           eq(scrobbles.trackId, trackId),
-          eq(scrobbles.listenedAt, input.listenedAt),
-        ),
+          eq(scrobbles.listenedAt, input.listenedAt)
+        )
       )
-      .limit(1);
+      .limit(1)
     if (!existing[0]) {
-      throw new Error("Scrobble resolution failed: duplicate detected but not found");
+      throw new Error(
+        "Scrobble resolution failed: duplicate detected but not found"
+      )
     }
-    scrobbleId = existing[0].id;
+    scrobbleId = existing[0].id
   }
 
-  return { scrobbleId, trackId, artistId, albumId, wasNew };
+  return { scrobbleId, trackId, artistId, albumId, wasNew }
 }

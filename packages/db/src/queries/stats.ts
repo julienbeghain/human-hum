@@ -1,17 +1,17 @@
-import { and, count, countDistinct, eq, max, min } from "drizzle-orm";
+import { and, count, countDistinct, eq, max, min } from "drizzle-orm"
 
-import type { Database } from "../index";
-import * as schema from "../schema";
-import { addArtistCondition, buildFilterConditions } from "./filter";
-import type { ScrobbleFilter, ScrobbleStats } from "./types";
+import type { Database } from "../index"
+import * as schema from "../schema"
+import { addArtistCondition, buildFilterConditions } from "./filter"
+import type { ScrobbleFilter, ScrobbleStats } from "./types"
 
 export async function getStats(
   db: Database,
-  params?: ScrobbleFilter,
+  params?: ScrobbleFilter
 ): Promise<ScrobbleStats> {
-  const filter = params ?? {};
-  const conditions = buildFilterConditions(filter);
-  addArtistCondition(conditions, filter);
+  const filter = params ?? {}
+  const conditions = buildFilterConditions(filter)
+  addArtistCondition(conditions, filter)
 
   // Always join tracks — needed for uniqueArtists count and artistId filtering
   const [row] = await db
@@ -25,7 +25,7 @@ export async function getStats(
     })
     .from(schema.scrobbles)
     .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
 
   return {
     total: row?.total ?? 0,
@@ -34,5 +34,5 @@ export async function getStats(
     uniqueArtists: row?.uniqueArtists ?? 0,
     uniqueTracks: row?.uniqueTracks ?? 0,
     uniqueAlbums: row?.uniqueAlbums ?? 0,
-  };
+  }
 }

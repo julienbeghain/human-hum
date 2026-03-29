@@ -1,22 +1,22 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm"
 
-import type { Database } from "../index";
-import * as schema from "../schema";
-import { buildFilterConditions } from "./filter";
+import type { Database } from "../index"
+import * as schema from "../schema"
+import { buildFilterConditions } from "./filter"
 import type {
   ArtistDetail,
   ArtistRanking,
   GetArtistDetailParams,
   GetArtistRankingsParams,
-} from "./types";
+} from "./types"
 
 export async function getArtistRankings(
   db: Database,
-  params?: GetArtistRankingsParams,
+  params?: GetArtistRankingsParams
 ): Promise<ArtistRanking[]> {
-  const filter = params ?? {};
-  const topN = filter.topN ?? 50;
-  const conditions = buildFilterConditions(filter);
+  const filter = params ?? {}
+  const topN = filter.topN ?? 50
+  const conditions = buildFilterConditions(filter)
 
   return db
     .select({
@@ -30,16 +30,16 @@ export async function getArtistRankings(
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .groupBy(schema.artists.id, schema.artists.name)
     .orderBy(desc(count(schema.scrobbles.id)))
-    .limit(topN);
+    .limit(topN)
 }
 
 export async function getArtistDetail(
   db: Database,
-  params: GetArtistDetailParams,
+  params: GetArtistDetailParams
 ): Promise<ArtistDetail | null> {
-  const { artistId, ...filter } = params;
-  const conditions = buildFilterConditions(filter);
-  conditions.push(eq(schema.tracks.artistId, artistId));
+  const { artistId, ...filter } = params
+  const conditions = buildFilterConditions(filter)
+  conditions.push(eq(schema.tracks.artistId, artistId))
 
   // Artist info + total play count
   const [artist] = await db
@@ -52,9 +52,9 @@ export async function getArtistDetail(
     .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
     .innerJoin(schema.artists, eq(schema.tracks.artistId, schema.artists.id))
     .where(and(...conditions))
-    .groupBy(schema.artists.id, schema.artists.name);
+    .groupBy(schema.artists.id, schema.artists.name)
 
-  if (!artist) return null;
+  if (!artist) return null
 
   // Top tracks for this artist
   const topTracks = await db
@@ -68,11 +68,11 @@ export async function getArtistDetail(
     .where(and(...conditions))
     .groupBy(schema.tracks.id, schema.tracks.name)
     .orderBy(desc(count(schema.scrobbles.id)))
-    .limit(10);
+    .limit(10)
 
   // Top albums for this artist (join albums directly)
-  const albumConditions = buildFilterConditions(filter);
-  albumConditions.push(eq(schema.albums.artistId, artistId));
+  const albumConditions = buildFilterConditions(filter)
+  albumConditions.push(eq(schema.albums.artistId, artistId))
 
   const topAlbums = await db
     .select({
@@ -85,7 +85,7 @@ export async function getArtistDetail(
     .where(and(...albumConditions))
     .groupBy(schema.albums.id, schema.albums.name)
     .orderBy(desc(count(schema.scrobbles.id)))
-    .limit(10);
+    .limit(10)
 
-  return { ...artist, topTracks, topAlbums };
+  return { ...artist, topTracks, topAlbums }
 }

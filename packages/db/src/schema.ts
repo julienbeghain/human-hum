@@ -5,9 +5,9 @@ import {
   timestamp,
   uniqueIndex,
   varchar,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/pg-core"
 
-import { listenSchema, timestampsWithoutUpdate } from "./shared";
+import { listenSchema, timestampsWithoutUpdate } from "./shared"
 
 // --- Enums ---
 
@@ -15,7 +15,7 @@ export const sourceEnum = listenSchema.enum("source", [
   "lastfm",
   "spotify",
   "tidal",
-]);
+])
 
 // --- Dimension tables ---
 
@@ -27,8 +27,8 @@ export const artists = listenSchema.table(
     mbid: varchar({ length: 36 }),
     ...timestampsWithoutUpdate,
   },
-  (t) => [uniqueIndex("artists_name_idx").on(t.name)],
-);
+  (t) => [uniqueIndex("artists_name_idx").on(t.name)]
+)
 
 export const albums = listenSchema.table(
   "albums",
@@ -44,8 +44,8 @@ export const albums = listenSchema.table(
   (t) => [
     uniqueIndex("albums_name_artist_id_idx").on(t.name, t.artistId),
     index("albums_artist_id_idx").on(t.artistId),
-  ],
-);
+  ]
+)
 
 export const tracks = listenSchema.table(
   "tracks",
@@ -61,8 +61,8 @@ export const tracks = listenSchema.table(
   (t) => [
     uniqueIndex("tracks_name_artist_id_idx").on(t.name, t.artistId),
     index("tracks_artist_id_idx").on(t.artistId),
-  ],
-);
+  ]
+)
 
 // --- Fact table ---
 
@@ -81,10 +81,10 @@ export const scrobbles = listenSchema.table(
   (t) => [
     uniqueIndex("scrobbles_track_id_listened_at_idx").on(
       t.trackId,
-      t.listenedAt,
+      t.listenedAt
     ),
     index("scrobbles_listened_at_idx").on(t.listenedAt),
     index("scrobbles_album_id_idx").on(t.albumId),
     index("scrobbles_source_idx").on(t.source),
-  ],
-);
+  ]
+)

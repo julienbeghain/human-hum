@@ -158,3 +158,16 @@
 - Re-exported `importScrobbles` from `lastfm.ts` for convenience — CLI wrapper just adds `new LastfmFetcher(apiKey, user)` as second arg
 - Added `./importers/source-fetcher` to package.json exports map for direct access to interface/types
 - No test changes needed — the refactor preserved all behavior, just reorganized code boundaries
+
+## Iteration 16: Auto-sync on page visit (human-hum-749)
+
+- Created `syncProbe()` function: lightweight check using fetchPage with pageSize=1 to get newTrackCount from totalPages
+- Added `NowPlayingTrack` type to `FetchPageResult` — source-agnostic, extracted by each fetcher
+- `LastfmFetcher.fetchPage` now extracts now-playing track info from `@attr.nowplaying === "true"` entries
+- `syncProbe` sets `from = latest - 1s` (same overlap strategy as incremental sync) or undefined for empty DB
+- `needsSync` is true when `totalPages > 0 && listens.length > 0` — pages with only now-playing (no completed listens) don't trigger sync
+- Server action `silentSync()` in `apps/web/app/actions/sync.ts`: probes, then conditionally runs `importScrobbles` (incremental mode)
+- `SyncTrigger` client component: fires once on mount via `useEffect` + `useRef` guard, uses `startTransition` for non-blocking execution
+- `router.refresh()` called only when new data was actually imported — avoids unnecessary re-renders
+- Re-exported `syncProbe`, `SyncProbeResult`, `NowPlayingTrack` from `lastfm.ts` for convenience imports
+- 5 new tests: no new data, new tracks available, multiple pages, now-playing extraction, empty DB handling

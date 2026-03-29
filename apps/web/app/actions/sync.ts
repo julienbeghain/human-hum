@@ -30,7 +30,7 @@ export type ProbeResult =
   | {
       probed: true
       needsSync: boolean
-      newTrackCount: number
+      newPageCount: number
       nowPlaying: NowPlayingTrack | null
     }
 
@@ -48,7 +48,7 @@ export async function probeSync(): Promise<ProbeResult> {
   return {
     probed: true,
     needsSync: probe.needsSync,
-    newTrackCount: probe.newTrackCount,
+    newPageCount: probe.newPageCount,
     nowPlaying: probe.nowPlaying,
   }
 }

@@ -74,7 +74,7 @@ export interface CompletenessResult {
 export interface SyncProbeResult {
   needsSync: boolean
   /** Number of new tracks available from the source. */
-  newTrackCount: number
+  newPageCount: number
   nowPlaying: NowPlayingTrack | null
 }
 
@@ -101,11 +101,11 @@ export async function syncProbe(
   const result = await fetcher.fetchPage({ page: 1, pageSize: 1, from })
 
   // When there's no local data, totalPages is the full history count
-  const newTrackCount = result.totalPages
+  const newPageCount = result.totalPages
 
   return {
-    needsSync: newTrackCount > 0 && result.listens.length > 0,
-    newTrackCount,
+    needsSync: result.listens.length > 0 || newPageCount > 1,
+    newPageCount,
     nowPlaying: result.nowPlaying ?? null,
   }
 }

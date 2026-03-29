@@ -64,7 +64,7 @@ describe("syncProbe", () => {
       const result = await syncProbe(db, fetcher)
 
       expect(result.needsSync).toBe(false)
-      expect(result.newTrackCount).toBe(1) // 1 page but 0 listens
+      expect(result.newPageCount).toBe(1) // 1 page but 0 listens
       expect(result.nowPlaying).toBeNull()
 
       // Verify from param was set correctly
@@ -90,7 +90,7 @@ describe("syncProbe", () => {
       const result = await syncProbe(db, fetcher)
 
       expect(result.needsSync).toBe(true)
-      expect(result.newTrackCount).toBe(1)
+      expect(result.newPageCount).toBe(1)
     } finally {
       await client.close()
     }
@@ -111,7 +111,7 @@ describe("syncProbe", () => {
       const result = await syncProbe(db, fetcher)
 
       expect(result.needsSync).toBe(true)
-      expect(result.newTrackCount).toBe(3)
+      expect(result.newPageCount).toBe(3)
     } finally {
       await client.close()
     }
@@ -133,6 +133,25 @@ describe("syncProbe", () => {
       const result = await syncProbe(db, fetcher)
 
       expect(result.nowPlaying).toEqual(nowPlaying)
+    } finally {
+      await client.close()
+    }
+  })
+
+  it("returns needsSync=true when multiple pages but page 1 is empty", async () => {
+    const { db, client } = await setupTestDb()
+    try {
+      const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
+      await importScrobbles(db, new FakeFetcher([seed]), { backfill: true })
+
+      // API says 3 pages exist but page 1 returns no listens
+      // (e.g., now-playing pushed track off page 1)
+      const fetcher = new FakeFetcher([[], [], []])
+
+      const result = await syncProbe(db, fetcher)
+
+      expect(result.needsSync).toBe(true)
+      expect(result.newPageCount).toBe(3)
     } finally {
       await client.close()
     }

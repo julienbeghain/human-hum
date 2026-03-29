@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { IconMusic } from "@tabler/icons-react"
 import { Spinner } from "@workspace/ui/components/spinner"
@@ -15,7 +15,6 @@ interface NowPlaying {
 
 export function SyncTrigger() {
   const router = useRouter()
-  const [, startTransition] = useTransition()
   const hasRun = useRef(false)
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null)
   const [syncing, setSyncing] = useState(false)
@@ -24,7 +23,7 @@ export function SyncTrigger() {
     if (hasRun.current) return
     hasRun.current = true
 
-    startTransition(async () => {
+    async function run() {
       const probe: ProbeResult = await probeSync()
       if (!probe.probed) return
 
@@ -33,7 +32,7 @@ export function SyncTrigger() {
       if (!probe.needsSync) return
 
       // Show syncing indicator for multi-page catch-ups
-      if (probe.newTrackCount > 1) {
+      if (probe.newPageCount > 1) {
         setSyncing(true)
       }
 
@@ -43,8 +42,10 @@ export function SyncTrigger() {
       if (result.imported > 0) {
         router.refresh()
       }
-    })
-  }, [router, startTransition])
+    }
+
+    void run()
+  }, [router])
 
   return (
     <>

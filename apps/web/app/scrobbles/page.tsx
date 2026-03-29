@@ -1,5 +1,5 @@
-import { db } from "@workspace/db";
-import { getScrobbles } from "@workspace/db/queries";
+import { db } from "@workspace/db"
+import { getScrobbles } from "@workspace/db/queries"
 import {
   Table,
   TableBody,
@@ -7,7 +7,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table";
+} from "@workspace/ui/components/table"
 
 function formatTimestamp(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -16,16 +16,14 @@ function formatTimestamp(date: Date): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
+  }).format(date)
 }
 
 export default async function ScrobblesPage() {
-  const { rows } = await getScrobbles(db);
+  const { rows } = await getScrobbles(db)
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
-      <h1 className="text-2xl font-medium">Scrobbles</h1>
-
+    <div className="flex flex-col gap-4 p-6">
       {rows.length === 0 ? (
         <p className="text-muted-foreground">
           No scrobbles yet. Import some listening history first.
@@ -50,7 +48,7 @@ export default async function ScrobblesPage() {
                 <TableCell className="text-muted-foreground">
                   {row.albumName ?? "—"}
                 </TableCell>
-                <TableCell className="text-muted-foreground text-right">
+                <TableCell className="text-right text-muted-foreground">
                   {formatTimestamp(row.listenedAt)}
                 </TableCell>
               </TableRow>
@@ -59,5 +57,5 @@ export default async function ScrobblesPage() {
         </Table>
       )}
     </div>
-  );
+  )
 }

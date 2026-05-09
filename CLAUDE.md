@@ -31,8 +31,21 @@ A personal music scrobbling platform — records listening history and surfaces 
 - [Component & UI Patterns](.claude/components.md)
 - [Architecture](.claude/architecture.md)
 - [Deep Module Principles](.claude/deep-modules.md)
-- [Domain Language](UBIQUITOUS_LANGUAGE.md)
+- [Domain Language](CONTEXT.md)
 
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as GitHub Issues on julienbeghain/human-hum. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout. Domain language in `CONTEXT.md`. See `docs/agents/domain.md`.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:b9766037 -->
 ## Beads Issue Tracker

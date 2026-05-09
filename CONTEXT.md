@@ -1,6 +1,10 @@
-# Ubiquitous Language
+# Human Hum — Domain Context
 
-## Listening data
+A personal music scrobbling platform that records listening history from multiple sources and surfaces insights.
+
+## Glossary
+
+### Listening data
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -11,7 +15,7 @@
 | **MusicBrainz ID (MBID)** | An external unique identifier from the MusicBrainz database, used to match entities across sources | External ID, MB ID |
 | **Listening history** | The complete ordered set of a user's scrobbles | Play history, scrobble history, library |
 
-## Data ingestion
+### Data ingestion
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -23,7 +27,7 @@
 | **Cross-source deduplication** | The process of detecting the same listening event reported by multiple sources within a ~30-second window | Dedup, reconciliation |
 | **Now playing** | A LastFM API entry with no timestamp, indicating a track currently being listened to — always skipped during import | Currently playing, live track |
 
-## Schema
+### Schema
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -31,7 +35,7 @@
 | **Fact table** | The `scrobbles` table that records each listening event with foreign keys to dimension tables | Event table, log table |
 | **Star schema** | The normalized schema pattern where a central fact table references surrounding dimension tables | Snowflake schema, normalized schema |
 
-## Infrastructure
+### Infrastructure
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -41,7 +45,7 @@
 | **`apps/import`** | The standalone script package for bulk LastFM import operations | Import script, importer |
 | **`apps/web`** | The Next.js 16 application that serves the UI | Frontend, web app, app |
 
-## AI & discovery (phase 8)
+### AI & discovery (phase 8)
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -49,7 +53,7 @@
 | **Forgotten favourite** | A track with high historical play count but a long gap since last scrobble | Lost gem, rediscovery |
 | **Playlist export** | The act of creating a Tidal playlist from a set of track IDs, making AI recommendations actionable | Playlist creation, playlist generation |
 
-## People
+### People
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -64,17 +68,6 @@
 - A **Scrobble** is uniquely identified by its `(track_id, listened_at)` pair — this is the deduplication key
 - A **User** owns zero or more **Scrobbles** (after phase 6)
 - A **Playlist export** transforms a list of **Tracks** into a playable Tidal playlist
-
-## Example dialogue
-
-> **Dev:** "When we **import** from LastFM, do we create a new **artist** row every time we see a name?"
-> **Domain expert:** "No — we **upsert** on `(name, mbid)`. If the **artist** already exists, we skip. Same for **tracks** and **albums**."
-> **Dev:** "What about **scrobbles** — how do we prevent duplicates?"
-> **Domain expert:** "The unique constraint on `(track_id, listened_at)` handles it. Two **scrobbles** for the same **track** at the exact same second are treated as one."
-> **Dev:** "And when we add Spotify in phase 7, what happens if the same listen arrives from both **sources**?"
-> **Domain expert:** "That's **cross-source deduplication**. If LastFM and Spotify report the same **track** within 30 seconds, we keep the direct **source** (Spotify) and discard the LastFM one."
-> **Dev:** "So **sync** and **poll** are different things?"
-> **Domain expert:** "Yes. **Sync** is user-triggered and incremental — it fetches new **scrobbles** since the last `listened_at`. **Poll** is cron-triggered, runs every 5 minutes, and only applies to Spotify's recently-played endpoint."
 
 ## Flagged ambiguities
 

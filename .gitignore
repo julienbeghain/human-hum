@@ -39,5 +39,8 @@ npm-debug.log*
 .dolt/
 *.db
 
-# Dolt internal stats (auto-updated, causes noisy diffs)
-.beads/dolt/.dolt/stats/
+# Beads runtime files (change every session, synced via bd dolt push/pull)
+.beads/backup/
+.beads/dolt-server.log
+.beads/dolt/**/noms/
+.mcp.json

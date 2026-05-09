@@ -110,6 +110,56 @@ export async function syncProbe(
   }
 }
 
+// --- Sync entry point ---
+
+export interface SyncOptions {
+  onProgress?: (progress: PageProgress) => void
+}
+
+export interface SyncResult {
+  needsSync: boolean
+  nowPlaying: NowPlayingTrack | null
+  imported: number
+  skipped: number
+  pagesProcessed: number
+}
+
+/**
+ * Probe-then-import: checks for new scrobbles and imports them if found.
+ *
+ * On empty DB, falls through to a full backfill. Returns now-playing info
+ * regardless of whether new data was imported.
+ */
+export async function syncScrobbles(
+  db: Database,
+  fetcher: SourceFetcher,
+  options?: SyncOptions
+): Promise<SyncResult> {
+  const probe = await syncProbe(db, fetcher)
+
+  if (!probe.needsSync) {
+    return {
+      needsSync: false,
+      nowPlaying: probe.nowPlaying,
+      imported: 0,
+      skipped: 0,
+      pagesProcessed: 0,
+    }
+  }
+
+  const result = await importScrobbles(db, fetcher, {
+    onProgress: options?.onProgress,
+  })
+
+  return {
+    needsSync: true,
+    nowPlaying: probe.nowPlaying,
+    imported: result.totalImported,
+    skipped: result.totalSkipped,
+    pagesProcessed: result.pagesProcessed,
+  }
+}
+
 // --- Orchestration ---
 
 const BASE_DELAY_MS = 200

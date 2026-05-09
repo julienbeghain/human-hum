@@ -2,9 +2,9 @@
 
 import { createDb } from "@workspace/db"
 import {
-  importScrobbles,
   LastfmFetcher,
   syncProbe,
+  syncScrobbles,
 } from "@workspace/db/importers/lastfm"
 import type { NowPlayingTrack, SyncProbeResult } from "@workspace/db/importers/lastfm"
 
@@ -36,6 +36,7 @@ export type ProbeResult =
 
 export type SyncResult = {
   imported: number
+  nowPlaying: NowPlayingTrack | null
 }
 
 export async function probeSync(): Promise<ProbeResult> {
@@ -55,10 +56,10 @@ export async function probeSync(): Promise<ProbeResult> {
 
 export async function runSync(): Promise<SyncResult> {
   const env = getFetcher()
-  if (!env) return { imported: 0 }
+  if (!env) return { imported: 0, nowPlaying: null }
 
   const { db, fetcher } = env
-  const result = await importScrobbles(db, fetcher, {})
+  const result = await syncScrobbles(db, fetcher)
 
-  return { imported: result.totalImported }
+  return { imported: result.imported, nowPlaying: result.nowPlaying }
 }

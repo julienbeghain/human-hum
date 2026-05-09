@@ -10,10 +10,11 @@ import { setupTestDb } from "../test-utils"
 import type {
   FetchPageParams,
   FetchPageResult,
+  NowPlayingTrack,
   PageProgress,
   SourceFetcher,
 } from "./source-fetcher"
-import { importScrobbles } from "./source-fetcher"
+import { importScrobbles, syncScrobbles } from "./source-fetcher"
 
 // --- Fake SourceFetcher ---
 
@@ -32,18 +33,31 @@ function makeListen(
   }
 }
 
+interface FakeFetcherOptions {
+  remotePlaycount?: number
+  nowPlaying?: NowPlayingTrack
+}
+
 class FakeFetcher implements SourceFetcher {
   readonly source: Source = "lastfm"
   readonly calls: FetchPageParams[] = []
   getRemotePlaycount?: () => Promise<number>
+  private nowPlaying?: NowPlayingTrack
 
+  constructor(pages: ListenInput[][], options?: FakeFetcherOptions)
+  constructor(pages: ListenInput[][], remotePlaycount?: number)
   constructor(
     private pages: ListenInput[][],
-    remotePlaycount?: number
+    optionsOrPlaycount?: FakeFetcherOptions | number
   ) {
-    if (remotePlaycount !== undefined) {
-      this.getRemotePlaycount = async () => remotePlaycount
+    const opts =
+      typeof optionsOrPlaycount === "number"
+        ? { remotePlaycount: optionsOrPlaycount }
+        : optionsOrPlaycount
+    if (opts?.remotePlaycount !== undefined) {
+      this.getRemotePlaycount = async () => opts.remotePlaycount!
     }
+    this.nowPlaying = opts?.nowPlaying
   }
 
   async fetchPage(params: FetchPageParams): Promise<FetchPageResult> {
@@ -53,7 +67,8 @@ class FakeFetcher implements SourceFetcher {
     return {
       listens,
       totalPages: this.pages.length,
-      skippedCount: 0,
+      skippedCount: this.nowPlaying ? 1 : 0,
+      nowPlaying: this.nowPlaying,
     }
   }
 }
@@ -252,6 +267,117 @@ describe("importScrobbles", () => {
       const result = await importScrobbles(freshDb, fetcher, { backfill: true })
 
       expect(result.completeness).toBeUndefined()
+    } finally {
+      await freshClient.close()
+    }
+  })
+})
+
+describe("syncScrobbles", () => {
+  it("skips import when no new data available", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+    try {
+      // Seed existing data
+      const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
+      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+
+      // Probe returns empty — nothing to sync
+      const fetcher = new FakeFetcher([[]])
+
+      const result = await syncScrobbles(freshDb, fetcher)
+
+      expect(result.needsSync).toBe(false)
+      expect(result.imported).toBe(0)
+      expect(result.pagesProcessed).toBe(0)
+    } finally {
+      await freshClient.close()
+    }
+  })
+
+  it("imports new scrobbles when available", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+    try {
+      // Seed existing data
+      const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
+      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+
+      // New data available
+      const newListens = [
+        makeListen("Burial", "Ghost Hardware", "2024-06-02T10:00:00Z"),
+        makeListen("Burial", "Near Dark", "2024-06-02T10:05:00Z"),
+      ]
+      const fetcher = new FakeFetcher([newListens])
+
+      const result = await syncScrobbles(freshDb, fetcher)
+
+      expect(result.needsSync).toBe(true)
+      expect(result.imported).toBe(2)
+      expect(result.pagesProcessed).toBe(1)
+
+      const { rows } = await getScrobbles(freshDb)
+      expect(rows.length).toBe(3)
+    } finally {
+      await freshClient.close()
+    }
+  })
+
+  it("includes now-playing information", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+    try {
+      const seed = [makeListen("Autechre", "Clipper", "2024-01-01T10:00:00Z")]
+      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+
+      const nowPlaying: NowPlayingTrack = {
+        trackName: "Gantz Graf",
+        artistName: "Autechre",
+        albumName: "Gantz Graf EP",
+      }
+      const fetcher = new FakeFetcher([[]], { nowPlaying })
+
+      const result = await syncScrobbles(freshDb, fetcher)
+
+      expect(result.nowPlaying).toEqual(nowPlaying)
+    } finally {
+      await freshClient.close()
+    }
+  })
+
+  it("calls onProgress during import", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+    try {
+      const seed = [makeListen("BoC", "Roygbiv", "2024-01-01T10:00:00Z")]
+      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+
+      const page1 = [makeListen("BoC", "Aquarius", "2024-01-02T10:00:00Z")]
+      const page2 = [makeListen("BoC", "Happy Cycling", "2024-01-03T10:00:00Z")]
+      const fetcher = new FakeFetcher([page1, page2])
+
+      const progress: PageProgress[] = []
+      await syncScrobbles(freshDb, fetcher, {
+        onProgress: (p) => progress.push({ ...p }),
+      })
+
+      expect(progress.length).toBe(2)
+      expect(progress[0]!.page).toBe(1)
+      expect(progress[1]!.page).toBe(2)
+    } finally {
+      await freshClient.close()
+    }
+  })
+
+  it("performs full backfill on empty database", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+    try {
+      const listens = [
+        makeListen("Clark", "Ted", "2024-01-01T10:00:00Z"),
+        makeListen("Clark", "Herr Bar", "2024-01-01T11:00:00Z"),
+      ]
+      const fetcher = new FakeFetcher([listens])
+
+      const result = await syncScrobbles(freshDb, fetcher)
+
+      expect(result.needsSync).toBe(true)
+      expect(result.imported).toBe(2)
     } finally {
       await freshClient.close()
     }

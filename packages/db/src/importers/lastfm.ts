@@ -7,14 +7,16 @@ import type {
 } from "./source-fetcher"
 
 // Re-export orchestration for convenience
-export { importScrobbles, syncProbe } from "./source-fetcher"
+export { importScrobbles, syncProbe, syncScrobbles } from "./source-fetcher"
 export type {
   CompletenessResult,
   ImportOptions,
   ImportResult,
   NowPlayingTrack,
   PageProgress,
+  SyncOptions,
   SyncProbeResult,
+  SyncResult,
 } from "./source-fetcher"
 
 // --- LastFM API types ---

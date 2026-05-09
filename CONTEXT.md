@@ -25,7 +25,7 @@ A personal music scrobbling platform that records listening history from multipl
 | **Poll** | A recurring, cron-triggered fetch of recently-played tracks from Spotify's API | Cron job, background sync |
 | **Upsert** | An insert that silently skips if a matching row already exists (deduplication) | Insert-or-ignore, merge |
 | **Cross-source deduplication** | The process of detecting the same listening event reported by multiple sources within a ~30-second window | Dedup, reconciliation |
-| **Now playing** | A LastFM API entry with no timestamp, indicating a track currently being listened to — always skipped during import | Currently playing, live track |
+| **Now playing** | A LastFM API entry with no timestamp, indicating a track currently being listened to. Skipped during import (no timestamp to record), but displayed in the Now Playing banner | Currently playing, live track |
 
 ### Schema
 
@@ -45,7 +45,7 @@ A personal music scrobbling platform that records listening history from multipl
 | **`apps/import`** | The standalone script package for bulk LastFM import operations | Import script, importer |
 | **`apps/web`** | The Next.js 16 application that serves the UI | Frontend, web app, app |
 
-### AI & discovery (phase 8)
+### AI & discovery
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -57,7 +57,7 @@ A personal music scrobbling platform that records listening history from multipl
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
-| **User** | An authenticated identity in the system (phase 6+) — before auth, the system is implicitly single-user | Account, listener, member |
+| **User** | An authenticated identity in the system — before auth is added, the system is implicitly single-user | Account, listener, member |
 
 ## Relationships
 
@@ -66,7 +66,7 @@ A personal music scrobbling platform that records listening history from multipl
 - An **Album** belongs to exactly one **Artist**
 - An **Artist**, **Album**, and **Track** may each have an optional **MBID**
 - A **Scrobble** is uniquely identified by its `(track_id, listened_at)` pair — this is the deduplication key
-- A **User** owns zero or more **Scrobbles** (after phase 6)
+- A **User** owns zero or more **Scrobbles** (once auth is added)
 - A **Playlist export** transforms a list of **Tracks** into a playable Tidal playlist
 
 ## Flagged ambiguities

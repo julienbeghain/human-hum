@@ -28,7 +28,9 @@ export type ScrobbleRow = {
   listenedAt: Date
   source: Source
   trackName: string
+  artistId: number
   artistName: string
+  albumId: number | null
   albumName: string | null
 }
 
@@ -91,6 +93,7 @@ export type GetAlbumDetailParams = ScrobbleFilter & {
 export type AlbumDetail = {
   albumId: number
   albumName: string
+  artistId: number
   artistName: string
   playCount: number
   tracks: { trackId: number; trackName: string; playCount: number }[]

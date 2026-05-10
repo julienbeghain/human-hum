@@ -17,7 +17,9 @@ const selectColumns = {
   listenedAt: schema.scrobbles.listenedAt,
   source: schema.scrobbles.source,
   trackName: schema.tracks.name,
+  artistId: schema.artists.id,
   artistName: schema.artists.name,
+  albumId: schema.scrobbles.albumId,
   albumName: schema.albums.name,
 }
 

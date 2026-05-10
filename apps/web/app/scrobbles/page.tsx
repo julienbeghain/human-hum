@@ -119,10 +119,24 @@ export default async function ScrobblesPage(props: {
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {row.artistName}
+                    <Link
+                      href={`/artists/${row.artistId}`}
+                      className="hover:underline"
+                    >
+                      {row.artistName}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {row.albumName ?? "—"}
+                    {row.albumId ? (
+                      <Link
+                        href={`/albums/${row.albumId}`}
+                        className="hover:underline"
+                      >
+                        {row.albumName}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {formatTimestamp(row.listenedAt)}

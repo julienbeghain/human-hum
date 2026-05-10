@@ -18,6 +18,7 @@ export async function getAlbumDetail(
     .select({
       albumId: schema.albums.id,
       albumName: schema.albums.name,
+      artistId: schema.artists.id,
       artistName: schema.artists.name,
       playCount: count(schema.scrobbles.id),
     })
@@ -25,7 +26,7 @@ export async function getAlbumDetail(
     .innerJoin(schema.albums, eq(schema.scrobbles.albumId, schema.albums.id))
     .innerJoin(schema.artists, eq(schema.albums.artistId, schema.artists.id))
     .where(and(...conditions))
-    .groupBy(schema.albums.id, schema.albums.name, schema.artists.name)
+    .groupBy(schema.albums.id, schema.albums.name, schema.artists.id, schema.artists.name)
 
   if (!album) return null
 

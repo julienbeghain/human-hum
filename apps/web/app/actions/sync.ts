@@ -1,18 +1,17 @@
 "use server"
 
 import { createDb } from "@workspace/db"
-import {
-  LastfmFetcher,
-  syncProbe,
-  syncScrobbles,
-} from "@workspace/db/importers/lastfm"
-import type { NowPlayingTrack, SyncProbeResult } from "@workspace/db/importers/lastfm"
+import { LastfmFetcher, syncScrobbles } from "@workspace/db/importers/lastfm"
+import type { NowPlayingTrack } from "@workspace/db/importers/lastfm"
 
 function getEnv(name: string): string | undefined {
   return process.env[name]
 }
 
-function getFetcher(): { db: ReturnType<typeof createDb>; fetcher: LastfmFetcher } | null {
+function getFetcher(): {
+  db: ReturnType<typeof createDb>
+  fetcher: LastfmFetcher
+} | null {
   const apiKey = getEnv("LASTFM_API_KEY")
   const user = getEnv("LASTFM_USER")
   const databaseUrl = getEnv("DATABASE_URL")
@@ -25,41 +24,26 @@ function getFetcher(): { db: ReturnType<typeof createDb>; fetcher: LastfmFetcher
   }
 }
 
-export type ProbeResult =
-  | { probed: false }
+export type CheckAndSyncResult =
+  | { ok: false }
   | {
-      probed: true
+      ok: true
       needsSync: boolean
-      newPageCount: number
+      imported: number
       nowPlaying: NowPlayingTrack | null
     }
 
-export type SyncResult = {
-  imported: number
-  nowPlaying: NowPlayingTrack | null
-}
-
-export async function probeSync(): Promise<ProbeResult> {
+export async function checkAndSync(): Promise<CheckAndSyncResult> {
   const env = getFetcher()
-  if (!env) return { probed: false }
-
-  const { db, fetcher } = env
-  const probe: SyncProbeResult = await syncProbe(db, fetcher)
-
-  return {
-    probed: true,
-    needsSync: probe.needsSync,
-    newPageCount: probe.newPageCount,
-    nowPlaying: probe.nowPlaying,
-  }
-}
-
-export async function runSync(): Promise<SyncResult> {
-  const env = getFetcher()
-  if (!env) return { imported: 0, nowPlaying: null }
+  if (!env) return { ok: false }
 
   const { db, fetcher } = env
   const result = await syncScrobbles(db, fetcher)
 
-  return { imported: result.imported, nowPlaying: result.nowPlaying }
+  return {
+    ok: true,
+    needsSync: result.needsSync,
+    imported: result.imported,
+    nowPlaying: result.nowPlaying,
+  }
 }

@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { startTransition, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { IconMusic } from "@tabler/icons-react"
 import { Spinner } from "@workspace/ui/components/spinner"
 
-import { probeSync, runSync, type ProbeResult } from "@/app/actions/sync"
+import { checkAndSync, type CheckAndSyncResult } from "@/app/actions/sync"
 
 interface NowPlaying {
   trackName: string
@@ -15,37 +15,25 @@ interface NowPlaying {
 
 export function SyncTrigger() {
   const router = useRouter()
-  const hasRun = useRef(false)
+  const hasRun = useRef<true | null>(null)
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null)
   const [syncing, setSyncing] = useState(false)
 
-  useEffect(() => {
-    if (hasRun.current) return
+  if (hasRun.current == null) {
     hasRun.current = true
-
-    async function run() {
-      const probe: ProbeResult = await probeSync()
-      if (!probe.probed) return
-
-      setNowPlaying(probe.nowPlaying ?? null)
-
-      if (!probe.needsSync) return
-
-      // Show syncing indicator for multi-page catch-ups
-      if (probe.newPageCount > 1) {
-        setSyncing(true)
-      }
-
-      const result = await runSync()
-
+    startTransition(async () => {
+      setSyncing(true)
+      const result: CheckAndSyncResult = await checkAndSync()
       setSyncing(false)
+
+      if (!result.ok) return
+
+      setNowPlaying(result.nowPlaying)
       if (result.imported > 0) {
         router.refresh()
       }
-    }
-
-    void run()
-  }, [router])
+    })
+  }
 
   return (
     <>

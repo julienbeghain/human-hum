@@ -35,8 +35,15 @@ export default async function ScrobbleDetailPage(props: {
             {scrobble.artistName}
           </Link>
         </p>
-        {scrobble.albumName && (
-          <p className="text-muted-foreground">{scrobble.albumName}</p>
+        {scrobble.albumId && scrobble.albumName && (
+          <p className="text-muted-foreground">
+            <Link
+              href={`/albums/${scrobble.albumId}`}
+              className="hover:underline"
+            >
+              {scrobble.albumName}
+            </Link>
+          </p>
         )}
       </div>
 

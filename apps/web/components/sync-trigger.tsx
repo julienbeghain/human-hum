@@ -1,11 +1,11 @@
 "use client"
 
-import { startTransition, useRef, useState } from "react"
+import { startTransition, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { IconMusic } from "@tabler/icons-react"
 import { Spinner } from "@workspace/ui/components/spinner"
 
-import { checkAndSync, type CheckAndSyncResult } from "@/app/actions/sync"
+import { checkAndSync } from "@/app/actions/sync"
 
 interface NowPlaying {
   trackName: string
@@ -15,25 +15,23 @@ interface NowPlaying {
 
 export function SyncTrigger() {
   const router = useRouter()
-  const hasRun = useRef<true | null>(null)
+  const hasRun = useRef(false)
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null)
-  const [syncing, setSyncing] = useState(false)
+  const [syncing, setSyncing] = useState(true)
 
-  if (hasRun.current == null) {
+  useEffect(() => {
+    if (hasRun.current) return
     hasRun.current = true
-    startTransition(async () => {
-      setSyncing(true)
-      const result: CheckAndSyncResult = await checkAndSync()
+
+    void checkAndSync().then((result) => {
       setSyncing(false)
-
       if (!result.ok) return
-
       setNowPlaying(result.nowPlaying)
       if (result.imported > 0) {
-        router.refresh()
+        startTransition(() => router.refresh())
       }
     })
-  }
+  }, [router])
 
   return (
     <>

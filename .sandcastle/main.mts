@@ -19,9 +19,14 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     break;
   }
 
-  const { issues } = JSON.parse(planMatch[1]) as {
-    issues: { number: number; title: string; branch: string }[];
+  const raw = JSON.parse(planMatch[1]) as {
+    issues: { number?: number; id?: number; title: string; branch: string }[];
   };
+  const issues = raw.issues.map((i) => ({
+    number: String(i.number ?? i.id),
+    title: i.title,
+    branch: i.branch,
+  }));
 
   if (issues.length === 0) {
     console.log("No issues to work on — stopping.");
@@ -72,7 +77,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   );
 
   const completedBranches: string[] = [];
-  const completedIssues: { number: number; title: string }[] = [];
+  const completedIssues: { number: string; title: string }[] = [];
 
   for (const entry of settled) {
     if (entry.status === "fulfilled") {

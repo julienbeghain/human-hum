@@ -20,9 +20,11 @@ Output your plan as a JSON object wrapped in `<plan>` tags:
 
 ```
 <plan>
-{"issues": [{"id": "human-hum-abc", "title": "Fix auth bug", "branch": "sandcastle/issue-human-hum-abc-fix-auth-bug"}]}
+{"issues": [{"number": 42, "title": "Fix auth bug", "branch": "sandcastle/issue-42-fix-auth-bug"}]}
 </plan>
 ```
+
+The `number` field MUST match the GitHub issue number from the input data. Do NOT use `id` — use `number`.
 
 If there are no issues ready to work on, output:
 

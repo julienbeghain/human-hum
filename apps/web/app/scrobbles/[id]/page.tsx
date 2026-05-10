@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
@@ -26,9 +27,23 @@ export default async function ScrobbleDetailPage(props: {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">{scrobble.trackName}</h1>
-        <p className="text-lg text-muted-foreground">{scrobble.artistName}</p>
-        {scrobble.albumName && (
-          <p className="text-muted-foreground">{scrobble.albumName}</p>
+        <p className="text-lg text-muted-foreground">
+          <Link
+            href={`/artists/${scrobble.artistId}`}
+            className="hover:underline"
+          >
+            {scrobble.artistName}
+          </Link>
+        </p>
+        {scrobble.albumId && scrobble.albumName && (
+          <p className="text-muted-foreground">
+            <Link
+              href={`/albums/${scrobble.albumId}`}
+              className="hover:underline"
+            >
+              {scrobble.albumName}
+            </Link>
+          </p>
         )}
       </div>
 

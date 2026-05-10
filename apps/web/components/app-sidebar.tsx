@@ -76,7 +76,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    isActive={pathname === item.href}
+                    isActive={pathname.startsWith(item.href)}
                     render={<Link href={item.href} />}
                   >
                     <item.icon />

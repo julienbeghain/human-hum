@@ -542,8 +542,8 @@
   <h1>Human <span>Hum</span></h1>
   <div class="subtitle">Project Audit &mdash; Full Status Report</div>
   <div class="meta">
-    <span class="done">21 issues closed</span>
-    <span class="open">10 issues open</span>
+    <span class="done">23 issues closed</span>
+    <span class="open">8 issues open</span>
     <span class="blocked">3 blocked by open work</span>
   </div>
 </header>
@@ -554,17 +554,17 @@
   <div class="summary-card">
     <div class="label">Total Issues</div>
     <div class="value">31</div>
-    <div class="detail">21 closed &middot; 10 open</div>
+    <div class="detail">23 closed &middot; 8 open</div>
   </div>
   <div class="summary-card">
     <div class="label">Completion</div>
-    <div class="value green">68%</div>
-    <div class="detail">Phases 1&ndash;3 done, Phase 4 in progress</div>
+    <div class="value green">74%</div>
+    <div class="detail">Phases 1&ndash;3 done, Phase 4 nearly complete</div>
   </div>
   <div class="summary-card">
     <div class="label">Ready for AFK</div>
     <div class="value blue">2</div>
-    <div class="detail">#38 labelled &middot; #7 unblocked (needs label)</div>
+    <div class="detail">#39 Now Playing &middot; #40 Catch-up spinner</div>
   </div>
   <div class="summary-card">
     <div class="label">Needs Human</div>
@@ -580,12 +580,12 @@
 <div class="dep-graph"><pre>
 <span class="connector">Phase 4 (current)</span>
 <span class="connector">│</span>
-<span class="connector">├──</span> <span class="node-ready">#38 Auto-sync: silent sync on page visit</span>    <span class="node-ready">← ready-for-agent</span>
-<span class="connector">│   ├──</span> <span class="node-blocked">#39 Now Playing banner</span>                    <span class="node-blocked">← blocked by #38</span>
-<span class="connector">│   └──</span> <span class="node-blocked">#40 Catch-up spinner</span>                     <span class="node-blocked">← blocked by #38</span>
+<span class="connector">├──</span> <span class="node-done">#38 Auto-sync: silent sync on page visit</span>    <span class="node-done">✓ closed May 10</span>
+<span class="connector">│   ├──</span> <span class="node-ready">#39 Now Playing banner</span>                    <span class="node-ready">← unblocked, ready for agent</span>
+<span class="connector">│   └──</span> <span class="node-ready">#40 Catch-up spinner</span>                     <span class="node-ready">← unblocked, ready for agent</span>
 <span class="connector">│</span>
-<span class="connector">├──</span> <span class="node-ready">#7  Listening history UI</span>                     <span class="node-ready">← unblocked (blocker #5 closed)</span>
-<span class="connector">│   └──</span> <span class="node-blocked">#8  Stats dashboard</span>                      <span class="node-blocked">← blocked by #7</span>
+<span class="connector">├──</span> <span class="node-done">#7  Listening history UI</span>                     <span class="node-done">✓ closed May 10</span>
+<span class="connector">│   └──</span> <span class="node-ready">#8  Stats dashboard</span>                      <span class="node-ready">← unblocked, ready for agent</span>
 <span class="connector">│</span>
 <span class="connector">Phase 6</span>
 <span class="connector">├──</span> <span class="node-hitl">#9  Auth + user model</span>                        <span class="node-hitl">← HITL (OAuth setup)</span>
@@ -597,10 +597,10 @@
 <span class="connector">└──</span> <span class="node-hitl">#11 AI discovery</span>                             <span class="node-hitl">← HITL, blocked by #10</span>
 </pre></div>
 
-<div class="alert alert-warn">
-  <div class="alert-title">Stale Blockers Detected</div>
-  Issues #7 and #9 both list "Blocked by #5" &mdash; but #5 was closed on 2026-03-23.
-  These issues are actually unblocked and available to work.
+<div class="alert alert-info">
+  <div class="alert-title">Newly Unblocked</div>
+  #38 and #7 were closed by Sandcastle on May 10, unblocking #39, #40, and #8.
+  All three are candidates for <code>ready-for-agent</code> labelling.
 </div>
 
 <!-- ───────────── Phases ───────────── -->
@@ -772,8 +772,8 @@
       Phase 4 &mdash; UI + Auto-Sync
     </div>
     <div class="phase-progress">
-      7/12
-      <div class="progress-bar"><div class="progress-fill" style="width:58%"></div></div>
+      9/12
+      <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
       <span class="chevron">&#9654;</span>
     </div>
   </div>
@@ -836,40 +836,51 @@
         <span class="issue-date">Mar 29</span>
       </div>
     </div>
-
-    <h3>Open Work</h3>
     <div class="issue">
       <span class="issue-num">#38</span>
       <span class="issue-title">Auto-sync: silent sync on page visit</span>
       <div class="issue-meta">
-        <span class="issue-status status-ready">Ready for Agent</span>
+        <span class="issue-status status-closed">Closed</span>
+        <span class="issue-date">May 10</span>
       </div>
-      <div class="issue-desc">Tracer bullet for auto-sync. SyncTrigger component in root layout calls server action to probe &amp; sync. Returns nowPlaying data for #39.</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#39</span>
-      <span class="issue-title">Auto-sync: Now Playing banner</span>
-      <div class="issue-meta">
-        <span class="issue-status status-blocked">Blocked</span>
-      </div>
-      <div class="issue-blocker">Blocked by #38</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#40</span>
-      <span class="issue-title">Auto-sync: catch-up mode with spinner</span>
-      <div class="issue-meta">
-        <span class="issue-status status-blocked">Blocked</span>
-      </div>
-      <div class="issue-blocker">Blocked by #38</div>
+      <div class="issue-desc">Sandcastle. SyncTrigger component in root layout, checkAndSync server action with startTransition.</div>
     </div>
     <div class="issue">
       <span class="issue-num">#7</span>
       <span class="issue-title">Listening history UI (artists, albums, detail pages)</span>
       <div class="issue-meta">
-        <span class="issue-status status-unblocked">Unblocked</span>
+        <span class="issue-status status-closed">Closed</span>
+        <span class="issue-date">May 10</span>
       </div>
-      <div class="issue-blocker resolved">Blocked by #5 &mdash; resolved (closed Mar 23)</div>
-      <div class="issue-desc">/artists ranked by play count, /artists/[id] with top tracks/albums/timeline, /albums/[id] with track listing. All server-rendered.</div>
+      <div class="issue-desc">Sandcastle. /artists ranked by play count, /artists/[id], /albums/[id] with track listing. Cross-linked navigation.</div>
+    </div>
+
+    <h3>Open Work</h3>
+    <div class="issue">
+      <span class="issue-num">#39</span>
+      <span class="issue-title">Auto-sync: Now Playing banner</span>
+      <div class="issue-meta">
+        <span class="issue-status status-ready">Unblocked</span>
+      </div>
+      <div class="issue-blocker resolved">Blocked by #38 &mdash; resolved (closed May 10)</div>
+      <div class="issue-desc">Show currently-playing track banner when sync detects active listening. Depends on nowPlaying data from #38&rsquo;s checkAndSync response.</div>
+    </div>
+    <div class="issue">
+      <span class="issue-num">#40</span>
+      <span class="issue-title">Auto-sync: catch-up mode with spinner</span>
+      <div class="issue-meta">
+        <span class="issue-status status-ready">Unblocked</span>
+      </div>
+      <div class="issue-blocker resolved">Blocked by #38 &mdash; resolved (closed May 10)</div>
+      <div class="issue-desc">Show spinner and progress when catch-up sync detects &gt;1 page of missing scrobbles.</div>
+    </div>
+    <div class="issue">
+      <span class="issue-num">#37</span>
+      <span class="issue-title">Auto-sync scrobbles on page visit + Now Playing (epic)</span>
+      <div class="issue-meta">
+        <span class="issue-status status-unblocked">1/3 sub-issues done</span>
+      </div>
+      <div class="issue-desc">Parent epic. #38 closed, #39 and #40 remain.</div>
     </div>
   </div>
 </div>
@@ -878,7 +889,7 @@
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
     <div class="phase-title">
-      <span class="phase-badge badge-future">Future</span>
+      <span class="phase-badge badge-active">Unblocked</span>
       Phase 5 &mdash; Stats Dashboard
     </div>
     <div class="phase-progress">
@@ -892,9 +903,9 @@
       <span class="issue-num">#8</span>
       <span class="issue-title">Stats dashboard</span>
       <div class="issue-meta">
-        <span class="issue-status status-blocked">Blocked</span>
+        <span class="issue-status status-ready">Unblocked</span>
       </div>
-      <div class="issue-blocker">Blocked by #7</div>
+      <div class="issue-blocker resolved">Blocked by #7 &mdash; resolved (closed May 10)</div>
       <div class="issue-desc">Total scrobbles, unique counts, scrobbles/week chart, top artists/tracks by time range, listening clock. Recharts. All queries &lt;200ms.</div>
     </div>
   </div>
@@ -920,8 +931,7 @@
       <div class="issue-meta">
         <span class="issue-status status-hitl">HITL</span>
       </div>
-      <div class="issue-blocker resolved">Blocked by #5 &mdash; resolved (closed Mar 23)</div>
-      <div class="issue-desc">Better Auth with Spotify/Tidal OAuth providers. Users/sessions tables. user_id FK on scrobbles + backfill. Auth middleware. Token storage.</div>
+      <div class="issue-desc">Better Auth with Spotify/Tidal OAuth providers. Users/sessions tables. user_id FK on scrobbles + backfill. Auth middleware. Token storage. No blockers &mdash; waiting on human for OAuth setup.</div>
     </div>
   </div>
 </div>
@@ -1018,6 +1028,7 @@
         <span class="issue-status status-closed">Closed</span>
         <span class="issue-date">May 9</span>
       </div>
+      <div class="issue-desc">Sandcastle. syncScrobbles() entry point for probe-then-import pattern.</div>
     </div>
     <div class="issue">
       <span class="issue-num">#30</span>
@@ -1059,9 +1070,13 @@
     <div class="timeline-date">May 9, 2026</div>
     <div class="timeline-text"><strong>Sandcastle online</strong> &mdash; First AFK run closes #29 (unified ingestion refactor)</div>
   </div>
+  <div class="timeline-entry milestone">
+    <div class="timeline-date">May 10, 2026</div>
+    <div class="timeline-text"><strong>Sandcastle double</strong> &mdash; Closes #38 (auto-sync) and #7 (listening history UI). 5 SANDCASTLE commits. Unblocks #39, #40, #8.</div>
+  </div>
   <div class="timeline-entry">
     <div class="timeline-date">May 10, 2026</div>
-    <div class="timeline-text">#38 labelled <code>ready-for-agent</code>. This audit.</div>
+    <div class="timeline-text">Audit updated. 3 issues now unblocked and ready for next Sandcastle run.</div>
   </div>
 </div>
 
@@ -1132,8 +1147,8 @@
   </div>
   <div class="stack-item">
     <div class="stack-label">Completed</div>
-    <div class="stack-value">1 issue</div>
-    <div class="stack-detail">#29 on May 9</div>
+    <div class="stack-value">3 issues</div>
+    <div class="stack-detail">#29 (May 9), #38 &amp; #7 (May 10)</div>
   </div>
 </div>
 
@@ -1142,8 +1157,8 @@
 <h2><span class="num">7</span> Tracker Drift: Beads vs GitHub</h2>
 
 <div class="alert alert-warn">
-  <div class="alert-title">Beads has stale state</div>
-  Beads was set up in March with the initial issue hierarchy but has not been kept in sync with GitHub closures. The following discrepancies exist:
+  <div class="alert-title">Beads still has drift</div>
+  The March stale blockers were cleaned up, but new drift exists from the May 10 Sandcastle closures.
 </div>
 
 <table class="decisions-table">
@@ -1158,42 +1173,20 @@
   </thead>
   <tbody>
     <tr>
-      <td>human-hum-tqv</td>
-      <td>#18</td>
-      <td style="color: var(--amber)">in_progress</td>
-      <td style="color: var(--green)">closed (Mar 23)</td>
-      <td>Close in Beads</td>
-    </tr>
-    <tr>
-      <td>human-hum-xyr</td>
-      <td>#6</td>
-      <td style="color: var(--amber)">open</td>
-      <td style="color: var(--green)">closed (Mar 23)</td>
-      <td>Close in Beads</td>
-    </tr>
-    <tr>
-      <td>human-hum-8xn</td>
-      <td>#5</td>
-      <td style="color: var(--amber)">open</td>
-      <td style="color: var(--green)">closed (Mar 23)</td>
-      <td>Close in Beads</td>
-    </tr>
-    <tr>
       <td>human-hum-dey</td>
       <td>#7</td>
-      <td>open (blocked by #5)</td>
-      <td>open</td>
-      <td>Remove stale dep</td>
-    </tr>
-    <tr>
-      <td>human-hum-vsa</td>
-      <td>#9</td>
-      <td>open (blocked by #5)</td>
-      <td>open</td>
-      <td>Remove stale dep</td>
+      <td style="color: var(--amber)">open</td>
+      <td style="color: var(--green)">closed (May 10)</td>
+      <td>Close in Beads</td>
     </tr>
   </tbody>
 </table>
+
+<div class="alert alert-info">
+  <div class="alert-title">Previously resolved</div>
+  March drift (human-hum-tqv/#18, human-hum-xyr/#6, human-hum-8xn/#5) was cleaned up. Stale deps on #5 removed.
+  Note: #38 was closed on GitHub by Sandcastle but has no corresponding Beads issue (it was only tracked in GitHub).
+</div>
 
 <!-- ───────────── Architecture ───────────── -->
 
@@ -1299,7 +1292,7 @@
 </table>
 
 <footer>
-  Generated 2026-05-10 &middot; Human Hum Project Audit &middot; 31 total issues &middot; 21 closed &middot; 10 open
+  Updated 2026-05-10 &middot; Human Hum Project Audit &middot; 31 total issues &middot; 23 closed &middot; 8 open &middot; 3 Sandcastle completions
 </footer>
 
 

@@ -9,6 +9,7 @@
       --bg: #0e0e10;
       --bg-card: #18181b;
       --bg-card-alt: #1e1e22;
+      --bg-hover: #252529;
       --border: #2a2a2e;
       --border-subtle: #222226;
       --text: #e4e4e7;
@@ -39,6 +40,8 @@
       margin: 0 auto;
     }
 
+    a { color: inherit; text-decoration: none; }
+
     header {
       border-bottom: 1px solid var(--border);
       padding-bottom: 2rem;
@@ -59,7 +62,7 @@
       font-size: 0.85rem;
     }
 
-    header .meta {
+    .header-stats {
       display: flex;
       gap: 2rem;
       margin-top: 1rem;
@@ -67,19 +70,29 @@
       color: var(--text-muted);
     }
 
-    header .meta span::before {
-      content: '';
-      display: inline-block;
+    .header-stats .stat {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    .header-stats .stat:hover { background: var(--bg-card); }
+    .header-stats .stat.active { background: var(--bg-card-alt); color: var(--text); }
+
+    .stat-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      margin-right: 0.5rem;
-      vertical-align: middle;
     }
 
-    .meta .done::before { background: var(--green); }
-    .meta .open::before { background: var(--amber); }
-    .meta .blocked::before { background: var(--red); }
+    .dot-green { background: var(--green); }
+    .dot-amber { background: var(--amber); }
+    .dot-red { background: var(--red); }
+    .dot-blue { background: var(--blue); }
 
     h2 {
       font-size: 1.1rem;
@@ -104,15 +117,6 @@
       font-weight: 700;
     }
 
-    h3 {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin: 2rem 0 0.75rem;
-    }
-
     /* Summary cards */
     .summary-grid {
       display: grid;
@@ -126,7 +130,12 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
     }
+
+    .summary-card:hover { border-color: var(--accent); background: var(--bg-card-alt); }
+    .summary-card.active { border-color: var(--accent); }
 
     .summary-card .label {
       font-size: 0.7rem;
@@ -152,6 +161,30 @@
     .value.red { color: var(--red); }
     .value.blue { color: var(--blue); }
 
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-chip:hover { border-color: var(--text-muted); color: var(--text); }
+    .filter-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
     /* Phase timeline */
     .phase {
       background: var(--bg-card);
@@ -161,6 +194,8 @@
       overflow: hidden;
     }
 
+    .phase.highlight { border-color: var(--accent); }
+
     .phase-header {
       display: flex;
       align-items: center;
@@ -168,6 +203,7 @@
       padding: 1rem 1.25rem;
       cursor: pointer;
       user-select: none;
+      transition: background 0.15s;
     }
 
     .phase-header:hover { background: var(--bg-card-alt); }
@@ -191,7 +227,7 @@
 
     .badge-done { background: var(--green-dim); color: var(--green); }
     .badge-active { background: var(--amber-dim); color: var(--amber); }
-    .badge-future { background: var(--blue-dim); color: var(--blue); }
+    .badge-planned { background: var(--blue-dim); color: var(--blue); }
     .badge-hitl { background: var(--red-dim); color: var(--red); }
 
     .phase-progress {
@@ -222,11 +258,11 @@
       padding: 0;
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.3s ease, padding 0.3s ease;
+      transition: max-height 0.35s ease, padding 0.35s ease;
     }
 
     .phase.open .phase-body {
-      max-height: 2000px;
+      max-height: 3000px;
       padding: 1rem 1.25rem;
     }
 
@@ -247,9 +283,16 @@
       padding: 0.75rem 0;
       border-bottom: 1px solid var(--border-subtle);
       font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.1s;
+      margin: 0 -0.5rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      border-radius: 6px;
     }
 
     .issue:last-child { border-bottom: none; }
+    .issue:hover { background: var(--bg-hover); }
 
     .issue-num {
       color: var(--text-muted);
@@ -257,7 +300,9 @@
       font-size: 0.75rem;
     }
 
-    .issue-title { font-weight: 500; }
+    .issue-num:hover { color: var(--accent); }
+
+    .issue-title-text { font-weight: 500; }
 
     .issue-meta {
       display: flex;
@@ -274,9 +319,9 @@
     }
 
     .status-closed { background: var(--green-dim); color: var(--green); }
+    .status-open { background: var(--amber-dim); color: var(--amber); }
     .status-ready { background: var(--accent-dim); color: var(--accent); }
     .status-blocked { background: var(--red-dim); color: var(--red); }
-    .status-unblocked { background: var(--amber-dim); color: var(--amber); }
     .status-hitl { background: var(--red-dim); color: var(--pink); }
 
     .issue-date {
@@ -292,6 +337,27 @@
       margin-top: 0.25rem;
     }
 
+    .issue-labels {
+      grid-column: 2 / -1;
+      display: flex;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .issue-label {
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .issue-label:hover { border-color: var(--accent); color: var(--accent); }
+
     .issue-blocker {
       grid-column: 2 / -1;
       font-size: 0.7rem;
@@ -305,27 +371,169 @@
       opacity: 0.7;
     }
 
+    .issue.dimmed { opacity: 0.35; }
+
+    /* Issue detail panel */
+    .detail-panel {
+      position: fixed;
+      right: -480px;
+      top: 0;
+      width: 480px;
+      height: 100vh;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      z-index: 100;
+      transition: right 0.25s ease;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+
+    .detail-panel.open { right: 0; }
+
+    .detail-panel-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 99;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    .detail-panel-backdrop.open { opacity: 1; pointer-events: all; }
+
+    .detail-close {
+      font-family: inherit;
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .detail-close:hover { border-color: var(--text); color: var(--text); }
+
+    .detail-number {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .detail-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .detail-meta {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.5rem 1rem;
+      font-size: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-meta dt { color: var(--text-muted); }
+    .detail-meta dd { color: var(--text-dim); }
+
+    .detail-section-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    .detail-desc {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    .detail-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .detail-link {
+      font-size: 0.75rem;
+      color: var(--accent);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .detail-link:hover { color: var(--text); }
+
+    .detail-gh-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-top: 1rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--accent-dim);
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .detail-gh-link:hover { background: var(--accent-dim); color: var(--text); }
+
     /* Dependency graph */
-    .dep-graph {
+    .dep-graph-container {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 1.5rem;
-      font-size: 0.8rem;
-      line-height: 2;
       overflow-x: auto;
     }
 
-    .dep-graph pre {
-      font-family: inherit;
-      color: var(--text-dim);
+    .dep-node {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.1s;
+      margin: 0 -0.5rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      border-radius: 4px;
     }
 
-    .dep-graph .node-done { color: var(--green); }
-    .dep-graph .node-ready { color: var(--accent); }
-    .dep-graph .node-blocked { color: var(--text-muted); }
-    .dep-graph .node-hitl { color: var(--pink); }
-    .dep-graph .connector { color: var(--border); }
+    .dep-node:hover { background: var(--bg-hover); }
+
+    .dep-connector { color: var(--border); user-select: none; }
+    .dep-indent { padding-left: 2rem; }
+    .dep-indent-2 { padding-left: 4rem; }
+
+    .node-done { color: var(--green); }
+    .node-ready { color: var(--accent); }
+    .node-open { color: var(--amber); }
+    .node-hitl { color: var(--pink); }
+    .node-planned { color: var(--blue); }
+
+    .dep-status {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      white-space: nowrap;
+    }
 
     /* Alert boxes */
     .alert {
@@ -353,92 +561,7 @@
       margin-bottom: 0.25rem;
     }
 
-    /* Decision table */
-    .decisions-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.75rem;
-      margin-top: 0.5rem;
-    }
-
-    .decisions-table th {
-      text-align: left;
-      padding: 0.5rem 0.75rem;
-      border-bottom: 2px solid var(--border);
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      font-size: 0.65rem;
-    }
-
-    .decisions-table td {
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--border-subtle);
-      color: var(--text-dim);
-      vertical-align: top;
-    }
-
-    .decisions-table td:first-child {
-      color: var(--text);
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    /* Triage guide */
-    .triage-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-top: 0.75rem;
-    }
-
-    .triage-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.25rem;
-    }
-
-    .triage-card h4 {
-      font-size: 0.8rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .triage-card ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    .triage-card li {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      padding: 0.3rem 0;
-      padding-left: 1.25rem;
-      position: relative;
-    }
-
-    .triage-card li::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0.6rem;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
-
-    .triage-afk li::before { background: var(--accent); }
-    .triage-hitl li::before { background: var(--pink); }
-
-    .triage-afk .rule { color: var(--accent); font-size: 0.7rem; font-weight: 600; }
-    .triage-hitl .rule { color: var(--pink); font-size: 0.7rem; font-weight: 600; }
-
-    /* Arch section */
+    /* Architecture grid */
     .stack-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -470,6 +593,38 @@
       font-size: 0.7rem;
       color: var(--text-dim);
       margin-top: 0.15rem;
+    }
+
+    /* Decisions table */
+    .decisions-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .decisions-table th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.65rem;
+    }
+
+    .decisions-table td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      vertical-align: top;
+    }
+
+    .decisions-table td:first-child {
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
     }
 
     /* Timeline */
@@ -511,6 +666,11 @@
       border-color: var(--green);
     }
 
+    .timeline-entry.current::before {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
     .timeline-date {
       color: var(--text-muted);
       font-size: 0.65rem;
@@ -518,6 +678,140 @@
 
     .timeline-text { color: var(--text-dim); }
     .timeline-text strong { color: var(--text); font-weight: 600; }
+
+    /* Triage guide */
+    .triage-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .triage-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+
+    .triage-card h4 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .triage-card ul { list-style: none; }
+
+    .triage-card li {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      padding: 0.3rem 0;
+      padding-left: 1.25rem;
+      position: relative;
+    }
+
+    .triage-card li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.6rem;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .triage-afk li::before { background: var(--accent); }
+    .triage-hitl li::before { background: var(--pink); }
+    .triage-afk .rule { color: var(--accent); font-size: 0.7rem; font-weight: 600; }
+    .triage-hitl .rule { color: var(--pink); font-size: 0.7rem; font-weight: 600; }
+
+    /* Roadmap */
+    .roadmap {
+      display: flex;
+      gap: 0;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .roadmap-stage {
+      flex: 1;
+      min-width: 140px;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .roadmap-stage:hover { transform: translateY(-2px); }
+
+    .roadmap-bar {
+      height: 6px;
+      border-radius: 3px;
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+
+    .roadmap-stage:not(:last-child) .roadmap-bar::after {
+      content: '›';
+      position: absolute;
+      right: -4px;
+      top: -10px;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+    }
+
+    .roadmap-bar.bar-done { background: var(--green); }
+    .roadmap-bar.bar-active { background: var(--amber); }
+    .roadmap-bar.bar-planned { background: var(--blue-dim); }
+    .roadmap-bar.bar-hitl { background: var(--red-dim); }
+
+    .roadmap-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+    }
+
+    .roadmap-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .roadmap-stage.stage-done .roadmap-label { color: var(--green); }
+    .roadmap-stage.stage-active .roadmap-label { color: var(--amber); }
+    .roadmap-stage.stage-planned .roadmap-label { color: var(--blue); }
+    .roadmap-stage.stage-hitl .roadmap-label { color: var(--pink); }
+
+    .roadmap-now {
+      display: inline-block;
+      font-size: 0.55rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--bg);
+      background: var(--amber);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      margin-left: 0.35rem;
+      vertical-align: middle;
+    }
+
+    .direction-narrative {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      color: var(--text-dim);
+    }
+
+    .direction-narrative strong { color: var(--text); }
+    .direction-narrative em { color: var(--accent); font-style: normal; }
 
     footer {
       margin-top: 4rem;
@@ -528,565 +822,65 @@
       text-align: center;
     }
 
+    kbd {
+      font-family: inherit;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--bg-card-alt);
+      color: var(--text-muted);
+    }
+
     @media (max-width: 700px) {
       body { padding: 1rem; }
       .triage-grid { grid-template-columns: 1fr; }
       .summary-grid { grid-template-columns: 1fr 1fr; }
-      header .meta { flex-wrap: wrap; gap: 1rem; }
+      .header-stats { flex-wrap: wrap; gap: 1rem; }
+      .detail-panel { width: 100%; right: -100%; }
     }
   </style>
 </head>
 <body>
 
+<div class="detail-panel-backdrop" id="detailBackdrop" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="detail-close" onclick="closeDetail()">&times;</button>
+  <div id="detailContent"></div>
+</div>
+
 <header>
   <h1>Human <span>Hum</span></h1>
-  <div class="subtitle">Project Audit &mdash; Full Status Report</div>
-  <div class="meta">
-    <span class="done">23 issues closed</span>
-    <span class="open">8 issues open</span>
-    <span class="blocked">3 blocked by open work</span>
-  </div>
+  <div class="subtitle">Project Audit &mdash; Interactive Status Dashboard</div>
+  <div class="header-stats" id="headerStats"></div>
 </header>
 
-<!-- ───────────── Summary ───────────── -->
+<div class="summary-grid" id="summaryGrid"></div>
 
-<div class="summary-grid">
-  <div class="summary-card">
-    <div class="label">Total Issues</div>
-    <div class="value">31</div>
-    <div class="detail">23 closed &middot; 8 open</div>
-  </div>
-  <div class="summary-card">
-    <div class="label">Completion</div>
-    <div class="value green">74%</div>
-    <div class="detail">Phases 1&ndash;3 done, Phase 4 nearly complete</div>
-  </div>
-  <div class="summary-card">
-    <div class="label">Ready for AFK</div>
-    <div class="value blue">2</div>
-    <div class="detail">#39 Now Playing &middot; #40 Catch-up spinner</div>
-  </div>
-  <div class="summary-card">
-    <div class="label">Needs Human</div>
-    <div class="value red">3</div>
-    <div class="detail">#9 Auth &middot; #10 Spotify &middot; #11 AI</div>
-  </div>
-</div>
+<h2><span class="num">1</span> Project Direction</h2>
+<div class="roadmap" id="roadmap"></div>
+<div class="direction-narrative" id="directionNarrative"></div>
 
-<!-- ───────────── Dependency Graph ───────────── -->
+<h2><span class="num">2</span> Dependency Graph</h2>
+<div class="dep-graph-container" id="depGraph"></div>
 
-<h2><span class="num">1</span> Dependency Graph</h2>
-
-<div class="dep-graph"><pre>
-<span class="connector">Phase 4 (current)</span>
-<span class="connector">│</span>
-<span class="connector">├──</span> <span class="node-done">#38 Auto-sync: silent sync on page visit</span>    <span class="node-done">✓ closed May 10</span>
-<span class="connector">│   ├──</span> <span class="node-ready">#39 Now Playing banner</span>                    <span class="node-ready">← unblocked, ready for agent</span>
-<span class="connector">│   └──</span> <span class="node-ready">#40 Catch-up spinner</span>                     <span class="node-ready">← unblocked, ready for agent</span>
-<span class="connector">│</span>
-<span class="connector">├──</span> <span class="node-done">#7  Listening history UI</span>                     <span class="node-done">✓ closed May 10</span>
-<span class="connector">│   └──</span> <span class="node-ready">#8  Stats dashboard</span>                      <span class="node-ready">← unblocked, ready for agent</span>
-<span class="connector">│</span>
-<span class="connector">Phase 6</span>
-<span class="connector">├──</span> <span class="node-hitl">#9  Auth + user model</span>                        <span class="node-hitl">← HITL (OAuth setup)</span>
-<span class="connector">│</span>
-<span class="connector">Phase 7</span>
-<span class="connector">├──</span> <span class="node-hitl">#10 Direct Spotify polling</span>                   <span class="node-hitl">← HITL, blocked by #9</span>
-<span class="connector">│</span>
-<span class="connector">Phase 8</span>
-<span class="connector">└──</span> <span class="node-hitl">#11 AI discovery</span>                             <span class="node-hitl">← HITL, blocked by #10</span>
-</pre></div>
-
-<div class="alert alert-info">
-  <div class="alert-title">Newly Unblocked</div>
-  #38 and #7 were closed by Sandcastle on May 10, unblocking #39, #40, and #8.
-  All three are candidates for <code>ready-for-agent</code> labelling.
-</div>
-
-<!-- ───────────── Phases ───────────── -->
-
-<h2><span class="num">2</span> Work by Phase</h2>
-
-<!-- Phase 1 -->
-<div class="phase open">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-done">Done</span>
-      Phase 1 &mdash; Foundation
-    </div>
-    <div class="phase-progress">
-      3/3
-      <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#2</span>
-      <span class="issue-title">Set up packages/db with Drizzle + Neon and define schema</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 22</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#3</span>
-      <span class="issue-title">Single-page LastFM import script</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 22</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#4</span>
-      <span class="issue-title">Render scrobbles at /scrobbles</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 29</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 2 -->
-<div class="phase">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-done">Done</span>
-      Phase 2 &mdash; Full Import Pipeline
-    </div>
-    <div class="phase-progress">
-      8/8
-      <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#20</span>
-      <span class="issue-title">Schema migration: remove mbid from unique indexes</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#21</span>
-      <span class="issue-title">Schema migration: move album_id from tracks to scrobbles</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#22</span>
-      <span class="issue-title">Update recordListen() for new schema</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#23</span>
-      <span class="issue-title">Update queries and /scrobbles page for new schema</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#24</span>
-      <span class="issue-title">Extract import core into packages/db/src/importers/lastfm.ts</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#25</span>
-      <span class="issue-title">Implement paginated backfill with rate limiting</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#26</span>
-      <span class="issue-title">Add backfill resume via checkpoint + completeness check</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#5</span>
-      <span class="issue-title">Full LastFM import (147k scrobbles)</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-      <div class="issue-desc">Epic. 8 sub-issues all completed. Paginated import, rate limiting, checkpoint resume, schema migrations.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 3 -->
-<div class="phase">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-done">Done</span>
-      Phase 3 &mdash; Incremental Sync
-    </div>
-    <div class="phase-progress">
-      2/2
-      <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#27</span>
-      <span class="issue-title">Implement incremental sync mode</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#6</span>
-      <span class="issue-title">Incremental sync from LastFM</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-      <div class="issue-desc">Epic. Server action fetches only new scrobbles since latest listened_at.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 4 -->
-<div class="phase open">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-active">Active</span>
-      Phase 4 &mdash; UI + Auto-Sync
-    </div>
-    <div class="phase-progress">
-      9/12
-      <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <h3>Completed</h3>
-    <div class="issue">
-      <span class="issue-num">#29</span>
-      <span class="issue-title">Refactor: Unified Source Ingestion Module</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">May 9</span>
-      </div>
-      <div class="issue-desc">Sandcastle's first autonomous completion. syncScrobbles() entry point for probe-then-import.</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#30</span>
-      <span class="issue-title">Refactor: Query Layer with Named Functions + Shared Filter</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 25</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#32</span>
-      <span class="issue-title">PRD: Scrobbles page pagination + detail view + app shell</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 29</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#33</span>
-      <span class="issue-title">Offset pagination for getScrobbles query</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 29</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#34</span>
-      <span class="issue-title">App shell: sidebar-07 with flat nav and mock user</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 29</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#35</span>
-      <span class="issue-title">Paginated /scrobbles page with page numbers</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 29</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#36</span>
-      <span class="issue-title">Scrobble detail page with basic stats</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 29</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#38</span>
-      <span class="issue-title">Auto-sync: silent sync on page visit</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">May 10</span>
-      </div>
-      <div class="issue-desc">Sandcastle. SyncTrigger component in root layout, checkAndSync server action with startTransition.</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#7</span>
-      <span class="issue-title">Listening history UI (artists, albums, detail pages)</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">May 10</span>
-      </div>
-      <div class="issue-desc">Sandcastle. /artists ranked by play count, /artists/[id], /albums/[id] with track listing. Cross-linked navigation.</div>
-    </div>
-
-    <h3>Open Work</h3>
-    <div class="issue">
-      <span class="issue-num">#39</span>
-      <span class="issue-title">Auto-sync: Now Playing banner</span>
-      <div class="issue-meta">
-        <span class="issue-status status-ready">Unblocked</span>
-      </div>
-      <div class="issue-blocker resolved">Blocked by #38 &mdash; resolved (closed May 10)</div>
-      <div class="issue-desc">Show currently-playing track banner when sync detects active listening. Depends on nowPlaying data from #38&rsquo;s checkAndSync response.</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#40</span>
-      <span class="issue-title">Auto-sync: catch-up mode with spinner</span>
-      <div class="issue-meta">
-        <span class="issue-status status-ready">Unblocked</span>
-      </div>
-      <div class="issue-blocker resolved">Blocked by #38 &mdash; resolved (closed May 10)</div>
-      <div class="issue-desc">Show spinner and progress when catch-up sync detects &gt;1 page of missing scrobbles.</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#37</span>
-      <span class="issue-title">Auto-sync scrobbles on page visit + Now Playing (epic)</span>
-      <div class="issue-meta">
-        <span class="issue-status status-unblocked">1/3 sub-issues done</span>
-      </div>
-      <div class="issue-desc">Parent epic. #38 closed, #39 and #40 remain.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 5 -->
-<div class="phase">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-active">Unblocked</span>
-      Phase 5 &mdash; Stats Dashboard
-    </div>
-    <div class="phase-progress">
-      0/1
-      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#8</span>
-      <span class="issue-title">Stats dashboard</span>
-      <div class="issue-meta">
-        <span class="issue-status status-ready">Unblocked</span>
-      </div>
-      <div class="issue-blocker resolved">Blocked by #7 &mdash; resolved (closed May 10)</div>
-      <div class="issue-desc">Total scrobbles, unique counts, scrobbles/week chart, top artists/tracks by time range, listening clock. Recharts. All queries &lt;200ms.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 6 -->
-<div class="phase">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-hitl">HITL</span>
-      Phase 6 &mdash; Authentication
-    </div>
-    <div class="phase-progress">
-      0/1
-      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#9</span>
-      <span class="issue-title">Auth + user model (Better Auth, Spotify + Tidal OAuth)</span>
-      <div class="issue-meta">
-        <span class="issue-status status-hitl">HITL</span>
-      </div>
-      <div class="issue-desc">Better Auth with Spotify/Tidal OAuth providers. Users/sessions tables. user_id FK on scrobbles + backfill. Auth middleware. Token storage. No blockers &mdash; waiting on human for OAuth setup.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 7 -->
-<div class="phase">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-hitl">HITL</span>
-      Phase 7 &mdash; Multi-Source Ingestion
-    </div>
-    <div class="phase-progress">
-      0/1
-      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#10</span>
-      <span class="issue-title">Direct Spotify polling + Tidal integration</span>
-      <div class="issue-meta">
-        <span class="issue-status status-hitl">HITL</span>
-      </div>
-      <div class="issue-blocker">Blocked by #9</div>
-      <div class="issue-desc">Spotify recently-played polling via cron. Cross-source dedup (±30s). Tidal history import + playlist creation.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Phase 8 -->
-<div class="phase">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-hitl">HITL</span>
-      Phase 8 &mdash; AI Discovery
-    </div>
-    <div class="phase-progress">
-      0/1
-      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#11</span>
-      <span class="issue-title">AI discovery (pgvector + chat agent + Tidal playlist export)</span>
-      <div class="issue-meta">
-        <span class="issue-status status-hitl">HITL</span>
-      </div>
-      <div class="issue-blocker">Blocked by #10</div>
-      <div class="issue-desc">pgvector embeddings, HNSW index, /chat UI with LLM tool-calling, similarity search, forgotten favourites, Tidal playlist generation.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ───────────── Refactors (non-phase) ───────────── -->
-
-<h2><span class="num">3</span> Refactors &amp; Housekeeping (completed)</h2>
-
-<div class="phase open">
-  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <div class="phase-title">
-      <span class="phase-badge badge-done">Done</span>
-      Cross-cutting refactors
-    </div>
-    <div class="phase-progress">
-      4/4
-      <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-      <span class="chevron">&#9654;</span>
-    </div>
-  </div>
-  <div class="phase-body">
-    <div class="issue">
-      <span class="issue-num">#18</span>
-      <span class="issue-title">Deepen scrobble ingestion: extract recordListen module</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#19</span>
-      <span class="issue-title">Separate DB queries from page components + add next-safe-action</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 23</span>
-      </div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#29</span>
-      <span class="issue-title">Refactor: Unified Source Ingestion Module</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">May 9</span>
-      </div>
-      <div class="issue-desc">Sandcastle. syncScrobbles() entry point for probe-then-import pattern.</div>
-    </div>
-    <div class="issue">
-      <span class="issue-num">#30</span>
-      <span class="issue-title">Refactor: Query Layer with Named Functions + Shared Filter</span>
-      <div class="issue-meta">
-        <span class="issue-status status-closed">Closed</span>
-        <span class="issue-date">Mar 25</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ───────────── Timeline ───────────── -->
+<h2><span class="num">3</span> Work by Phase</h2>
+<div class="filter-bar" id="filterBar"></div>
+<div id="phasesContainer"></div>
 
 <h2><span class="num">4</span> Project Timeline</h2>
+<div class="timeline" id="timeline"></div>
 
-<div class="timeline">
-  <div class="timeline-entry milestone">
-    <div class="timeline-date">Mar 22, 2026</div>
-    <div class="timeline-text"><strong>Phase 1 complete</strong> &mdash; DB schema, first import, basic /scrobbles</div>
-  </div>
-  <div class="timeline-entry milestone">
-    <div class="timeline-date">Mar 23, 2026</div>
-    <div class="timeline-text"><strong>Phases 2 &amp; 3 complete</strong> &mdash; Full 147k import pipeline + incremental sync. 8 issues closed in one day.</div>
-  </div>
-  <div class="timeline-entry">
-    <div class="timeline-date">Mar 25, 2026</div>
-    <div class="timeline-text">Query layer refactored (#30)</div>
-  </div>
-  <div class="timeline-entry milestone">
-    <div class="timeline-date">Mar 29, 2026</div>
-    <div class="timeline-text"><strong>Phase 4 UI batch</strong> &mdash; App shell, pagination, detail page. 5 issues closed.</div>
-  </div>
-  <div class="timeline-entry">
-    <div class="timeline-date">Mar 29 &ndash; May 8</div>
-    <div class="timeline-text" style="color: var(--text-muted); font-style: italic;">40-day gap &mdash; no issue closures</div>
-  </div>
-  <div class="timeline-entry">
-    <div class="timeline-date">May 9, 2026</div>
-    <div class="timeline-text"><strong>Sandcastle online</strong> &mdash; First AFK run closes #29 (unified ingestion refactor)</div>
-  </div>
-  <div class="timeline-entry milestone">
-    <div class="timeline-date">May 10, 2026</div>
-    <div class="timeline-text"><strong>Sandcastle double</strong> &mdash; Closes #38 (auto-sync) and #7 (listening history UI). 5 SANDCASTLE commits. Unblocks #39, #40, #8.</div>
-  </div>
-  <div class="timeline-entry">
-    <div class="timeline-date">May 10, 2026</div>
-    <div class="timeline-text">Audit updated. 3 issues now unblocked and ready for next Sandcastle run.</div>
-  </div>
-</div>
+<h2><span class="num">5</span> Architecture Snapshot</h2>
+<div class="stack-grid" id="archGrid"></div>
 
-<!-- ───────────── Triage Guide ───────────── -->
+<h2><span class="num">6</span> Key Architecture Decisions</h2>
+<div id="decisionsContainer"></div>
 
-<h2><span class="num">5</span> Triage: AFK vs HITL</h2>
-
+<h2><span class="num">7</span> Triage: AFK vs HITL</h2>
 <div class="triage-grid">
   <div class="triage-card triage-afk">
-    <h4><span class="phase-badge badge-done" style="background: var(--accent-dim); color: var(--accent);">AFK</span> ready-for-agent</h4>
+    <h4><span class="phase-badge" style="background:var(--accent-dim);color:var(--accent)">AFK</span> ready-for-agent</h4>
     <p class="rule">Apply when ALL conditions are met:</p>
     <ul>
       <li>Acceptance criteria are concrete and testable</li>
@@ -1110,191 +904,503 @@
   </div>
 </div>
 
-<!-- ───────────── Sandcastle ───────────── -->
+<footer id="footer"></footer>
 
-<h2><span class="num">6</span> Sandcastle (AFK Agent Pipeline)</h2>
+<script>
+const REPO = "julienbeghain/human-hum";
+const REPO_URL = `https://github.com/${REPO}`;
 
-<div class="alert alert-info">
-  <div class="alert-title">How it works</div>
-  Sandcastle runs Claude Code agents in Docker sandboxes. A <strong>Planner</strong> reads GitHub issues labelled <code>ready-for-agent</code>, assigns up to 4 to parallel <strong>Implementers</strong>, a <strong>Reviewer</strong> validates each, and a <strong>Merger</strong> fast-forwards into main and closes the issue. Sandcastle never creates issues &mdash; it only consumes them.
-</div>
+const issues = [
+  { num: 1, title: "PRD: Human Hum — LastFM Alternative", state: "open", labels: ["prd"], phase: null, desc: "Master PRD with all architectural decisions, phase definitions, and rejected alternatives.", created: "2026-03-29" },
+  { num: 2, title: "Set up packages/db with Drizzle + Neon and define schema", state: "closed", labels: ["phase-1", "infra", "schema"], phase: 1, closed: "2026-03-22", desc: "Star schema with artists, albums, tracks (dimension) and scrobbles (fact). Drizzle ORM, Neon serverless Postgres." },
+  { num: 3, title: "Single-page LastFM import script", state: "closed", labels: ["phase-1", "import"], phase: 1, closed: "2026-03-22", desc: "First import script — single page of scrobbles from LastFM API." },
+  { num: 4, title: "Render scrobbles at /scrobbles", state: "closed", labels: ["phase-1", "ui"], phase: 1, closed: "2026-03-29", desc: "Basic scrobbles listing page." },
+  { num: 5, title: "Full LastFM import (147k scrobbles)", state: "closed", labels: ["phase-2", "import"], phase: 2, closed: "2026-03-23", desc: "Epic. 8 sub-issues. Paginated import, rate limiting, checkpoint resume, schema migrations.", epic: true },
+  { num: 6, title: "Incremental sync from LastFM", state: "closed", labels: ["phase-3", "sync"], phase: 3, closed: "2026-03-23", desc: "Epic. Server action fetches only new scrobbles since latest listened_at.", epic: true },
+  { num: 7, title: "Listening history UI (artists, albums, detail pages)", state: "closed", labels: ["phase-4", "ui", "ready-for-agent"], phase: 4, closed: "2026-05-10", desc: "Sandcastle. /artists ranked by play count, /artists/[id], /albums/[id] with track listing. Cross-linked navigation.", agent: "sandcastle" },
+  { num: 8, title: "Stats dashboard", state: "open", labels: ["phase-5", "ui"], phase: 5, desc: "Total scrobbles, unique counts, scrobbles/week chart, top artists/tracks by time range, listening clock. Recharts.", blockedBy: [7], blockedResolved: true },
+  { num: 9, title: "Auth + user model (Better Auth, Spotify + Tidal OAuth)", state: "open", labels: ["phase-6", "auth", "HITL"], phase: 6, desc: "Better Auth with Spotify/Tidal OAuth providers. Users/sessions tables. user_id FK on scrobbles. Auth middleware.", hitl: true },
+  { num: 10, title: "Direct Spotify polling + Tidal integration", state: "open", labels: ["phase-7", "ingestion", "HITL"], phase: 7, desc: "Spotify recently-played polling via cron. Cross-source dedup (±30s). Tidal history import + playlist creation.", blockedBy: [9], hitl: true },
+  { num: 11, title: "AI discovery (pgvector + chat agent + Tidal playlist export)", state: "open", labels: ["phase-8", "ai", "HITL"], phase: 8, desc: "pgvector embeddings, HNSW index, /chat UI with LLM tool-calling, similarity search, forgotten favourites, Tidal playlist generation.", blockedBy: [10], hitl: true },
+  { num: 18, title: "Deepen scrobble ingestion: extract recordListen module", state: "closed", labels: ["refactor"], phase: "refactor", closed: "2026-03-23", desc: "Deep module extraction. recordListen() as stable ingestion primitive." },
+  { num: 19, title: "Separate DB queries from page components + add next-safe-action", state: "closed", labels: ["refactor"], phase: "refactor", closed: "2026-03-23", desc: "Query layer separation. Direct db injection in server components." },
+  { num: 20, title: "Schema migration: remove mbid from unique indexes", state: "closed", labels: ["phase-2"], phase: 2, closed: "2026-03-23" },
+  { num: 21, title: "Schema migration: move album_id from tracks to scrobbles", state: "closed", labels: ["phase-2", "schema"], phase: 2, closed: "2026-03-23" },
+  { num: 22, title: "Update recordListen() for new schema", state: "closed", labels: ["phase-2", "schema"], phase: 2, closed: "2026-03-23" },
+  { num: 23, title: "Update queries and /scrobbles page for new schema", state: "closed", labels: ["phase-2"], phase: 2, closed: "2026-03-23" },
+  { num: 24, title: "Extract import core into packages/db/src/importers/lastfm.ts", state: "closed", labels: ["phase-2"], phase: 2, closed: "2026-03-23" },
+  { num: 25, title: "Implement paginated backfill with rate limiting", state: "closed", labels: ["phase-2"], phase: 2, closed: "2026-03-23" },
+  { num: 26, title: "Add backfill resume via checkpoint + completeness check", state: "closed", labels: ["phase-2"], phase: 2, closed: "2026-03-23" },
+  { num: 27, title: "Implement incremental sync mode", state: "closed", labels: ["phase-3"], phase: 3, closed: "2026-03-23" },
+  { num: 29, title: "Refactor: Unified Source Ingestion Module", state: "closed", labels: ["refactor", "ready-for-agent"], phase: "refactor", closed: "2026-05-09", desc: "Sandcastle. syncScrobbles() entry point for probe-then-import pattern.", agent: "sandcastle" },
+  { num: 30, title: "Refactor: Query Layer with Named Functions + Shared Filter", state: "closed", labels: ["refactor"], phase: "refactor", closed: "2026-03-25", desc: "Named query functions, ScrobbleFilter type, no repository pattern." },
+  { num: 32, title: "PRD: Scrobbles page pagination + detail view + app shell", state: "closed", labels: ["phase-4", "ui", "prd"], phase: 4, closed: "2026-03-29" },
+  { num: 33, title: "Offset pagination for getScrobbles query", state: "closed", labels: ["phase-4"], phase: 4, closed: "2026-03-29" },
+  { num: 34, title: "App shell: sidebar-07 with flat nav and mock user", state: "closed", labels: ["phase-4", "ui"], phase: 4, closed: "2026-03-29" },
+  { num: 35, title: "Paginated /scrobbles page with page numbers", state: "closed", labels: ["phase-4", "ui"], phase: 4, closed: "2026-03-29" },
+  { num: 36, title: "Scrobble detail page with basic stats", state: "closed", labels: ["phase-4", "ui"], phase: 4, closed: "2026-03-29" },
+  { num: 37, title: "Auto-sync scrobbles on page visit + Now Playing", state: "open", labels: ["phase-4"], phase: 4, desc: "Parent epic. #38 closed, #39 and #40 remain.", epic: true },
+  { num: 38, title: "Auto-sync: silent sync on page visit", state: "closed", labels: ["phase-4", "ready-for-agent"], phase: 4, closed: "2026-05-10", desc: "Sandcastle. SyncTrigger component in root layout, checkAndSync server action with startTransition.", agent: "sandcastle" },
+  { num: 39, title: "Auto-sync: Now Playing banner", state: "open", labels: ["phase-4"], phase: 4, desc: "Show currently-playing track banner when sync detects active listening.", blockedBy: [38], blockedResolved: true },
+  { num: 40, title: "Auto-sync: catch-up mode with spinner", state: "open", labels: ["phase-4"], phase: 4, desc: "Show spinner and progress when catch-up sync detects >1 page of missing scrobbles.", blockedBy: [38], blockedResolved: true },
+  { num: 43, title: "Album detail page: enrichment infrastructure + artwork + track ordering", state: "open", labels: ["prd", "ready-for-agent"], phase: "enrichment", desc: "PRD. On-demand album enrichment via LastFM album.getInfo. Schema: album_tracks bridge table, image_url + enriched_at on albums. 4-phase plan.", epic: true }
+];
 
-<div class="stack-grid">
-  <div class="stack-item">
-    <div class="stack-label">Entry Gate</div>
-    <div class="stack-value">ready-for-agent</div>
-    <div class="stack-detail">GitHub label</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Parallelism</div>
-    <div class="stack-value">4 issues</div>
-    <div class="stack-detail">Per iteration</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Implementer</div>
-    <div class="stack-value">Opus 4.6</div>
-    <div class="stack-detail">Red-Green-Refactor TDD</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Reviewer</div>
-    <div class="stack-value">Sonnet 4.6</div>
-    <div class="stack-detail">CODING_STANDARDS.md</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Commit Prefix</div>
-    <div class="stack-value">SANDCASTLE:</div>
-    <div class="stack-detail">Identifies AFK work</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Completed</div>
-    <div class="stack-value">3 issues</div>
-    <div class="stack-detail">#29 (May 9), #38 &amp; #7 (May 10)</div>
-  </div>
-</div>
+const phases = [
+  { id: 1, name: "Foundation", badge: "done" },
+  { id: 2, name: "Full Import Pipeline", badge: "done" },
+  { id: 3, name: "Incremental Sync", badge: "done" },
+  { id: 4, name: "UI + Auto-Sync", badge: "active" },
+  { id: 5, name: "Stats Dashboard", badge: "planned" },
+  { id: "enrichment", name: "Album Enrichment", badge: "planned" },
+  { id: 6, name: "Authentication", badge: "hitl" },
+  { id: 7, name: "Multi-Source Ingestion", badge: "hitl" },
+  { id: 8, name: "AI Discovery", badge: "hitl" },
+  { id: "refactor", name: "Refactors & Housekeeping", badge: "done" }
+];
 
-<!-- ───────────── Tracker Drift ───────────── -->
+const architecture = [
+  { label: "Framework", value: "Next.js 16", detail: "React 19, Turbopack" },
+  { label: "Database", value: "Neon", detail: "Serverless Postgres" },
+  { label: "ORM", value: "Drizzle", detail: "SQL-first, 57KB" },
+  { label: "Monorepo", value: "pnpm + Turbo", detail: "apps/web, packages/db, packages/ui" },
+  { label: "UI", value: "shadcn/ui", detail: "55 components, base-maia" },
+  { label: "Styling", value: "Tailwind v4", detail: "OKLch colour system" },
+  { label: "Schema", value: "Star schema", detail: "artists, albums, tracks, scrobbles" },
+  { label: "Data", value: "147k scrobbles", detail: "~5k tracks, ~1.5k artists" }
+];
 
-<h2><span class="num">7</span> Tracker Drift: Beads vs GitHub</h2>
+const decisions = [
+  { decision: "Primary keys", choice: "Integer (GENERATED ALWAYS)", rationale: "Single instance, no distributed IDs needed. 4B vs 16B (UUID), faster joins." },
+  { decision: "MBIDs", choice: "Nullable, non-unique", rationale: "LastFM MBIDs are inconsistent. Store as metadata, not identity." },
+  { decision: "Album relationship", choice: "Album on scrobble, not track", rationale: "Same track appears on different albums. Scrobble = \"track X from album Y at time T\"." },
+  { decision: "Album tracks", choice: "Bridge table with stored names", rationale: "album_tracks stores full tracklist from enrichment API. Nullable track_id for unscrobbled tracks. PK (album_id, track_number). ADR 0001." },
+  { decision: "Enrichment", choice: "On-demand per album", rationale: "Triggered on page visit when enriched_at IS NULL. AlbumInfoFetcher port. Failure leaves enriched_at NULL for retry." },
+  { decision: "Sync trigger", choice: "CLI + auto-sync on page visit", rationale: "Silent probe on mount, then conditional import. Two modes: silent (≤1 page) and catch-up with spinner." },
+  { decision: "Query layer", choice: "Named functions, no repository", rationale: "Explicit db injection. Each function independently evolvable. Split at ~300 lines." },
+  { decision: "Ingestion separation", choice: "recordListen() ≠ importScrobbles()", rationale: "recordListen is stable primitive (entity resolution). importScrobbles is orchestration (pagination, sync)." },
+  { decision: "Auth", choice: "Better Auth — deferred to Phase 6", rationale: "Don't block first scrobble on auth plumbing." },
+  { decision: "Playlist export", choice: "Tidal, not Spotify", rationale: "Spotify deprecated public playlist creation. Tidal = ingestion source + playlist output." }
+];
 
-<div class="alert alert-warn">
-  <div class="alert-title">Beads still has drift</div>
-  The March stale blockers were cleaned up, but new drift exists from the May 10 Sandcastle closures.
-</div>
+const timelineEvents = [
+  { date: "Mar 22, 2026", text: "<strong>Phase 1 complete</strong> — DB schema, first import, basic /scrobbles", milestone: true },
+  { date: "Mar 23, 2026", text: "<strong>Phases 2 & 3 complete</strong> — Full 147k import pipeline + incremental sync. 8 issues closed in one day.", milestone: true },
+  { date: "Mar 25, 2026", text: "Query layer refactored (#30)" },
+  { date: "Mar 29, 2026", text: "<strong>Phase 4 UI batch</strong> — App shell, pagination, detail page. 5 issues closed.", milestone: true },
+  { date: "Mar 29 – May 8", text: "<em style='color:var(--text-muted)'>40-day gap — no issue closures</em>" },
+  { date: "May 9, 2026", text: "<strong>Sandcastle online</strong> — First AFK run closes #29 (unified ingestion refactor)" },
+  { date: "May 10, 2026", text: "<strong>Sandcastle double</strong> — Closes #38 (auto-sync) and #7 (listening history UI). Unblocks #39, #40, #8.", milestone: true },
+  { date: "May 13, 2026", text: "<strong>Album enrichment PRD</strong> — #43 created. album_tracks bridge table, on-demand enrichment via LastFM album.getInfo. ADR 0001 written. 4-phase plan filed.", current: true }
+];
 
-<table class="decisions-table">
-  <thead>
-    <tr>
-      <th>Beads ID</th>
-      <th>GitHub #</th>
-      <th>Beads Status</th>
-      <th>GitHub Status</th>
-      <th>Action Needed</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>human-hum-dey</td>
-      <td>#7</td>
-      <td style="color: var(--amber)">open</td>
-      <td style="color: var(--green)">closed (May 10)</td>
-      <td>Close in Beads</td>
-    </tr>
-  </tbody>
-</table>
+const roadmapStages = [
+  {
+    id: "data-pipeline",
+    label: "Data Pipeline",
+    sub: "Import, sync, dedup",
+    status: "done",
+    phases: [1, 2, 3],
+    narrative: "Built the ingestion backbone — full LastFM import of 147k scrobbles, incremental sync, and auto-sync on page visit."
+  },
+  {
+    id: "core-ui",
+    label: "Core UI",
+    sub: "Browse, navigate, explore",
+    status: "active",
+    phases: [4],
+    narrative: "Scrobbles, artists, albums are browsable with cross-linked navigation. Now Playing and catch-up spinner remain."
+  },
+  {
+    id: "enrichment",
+    label: "Enrichment",
+    sub: "Artwork, metadata, track order",
+    status: "active",
+    phases: ["enrichment"],
+    narrative: "On-demand album enrichment via LastFM album.getInfo — artwork, track numbers, duration. Makes albums feel like albums, not data tables."
+  },
+  {
+    id: "insights",
+    label: "Insights",
+    sub: "Stats, charts, patterns",
+    status: "planned",
+    phases: [5],
+    narrative: "Stats dashboard with charts, time-range filtering, and listening patterns. Unblocked — waiting to be built."
+  },
+  {
+    id: "identity",
+    label: "Identity",
+    sub: "Auth, multi-user",
+    status: "hitl",
+    phases: [6],
+    narrative: "Better Auth with Spotify + Tidal OAuth. Unlocks multi-user and direct source integrations. Requires human for OAuth app setup."
+  },
+  {
+    id: "multi-source",
+    label: "Multi-Source",
+    sub: "Spotify polling, Tidal, dedup",
+    status: "hitl",
+    phases: [7],
+    narrative: "Direct Spotify polling + Tidal integration. Cross-source deduplication. Blocked by auth."
+  },
+  {
+    id: "ai",
+    label: "AI Discovery",
+    sub: "Embeddings, chat, playlists",
+    status: "hitl",
+    phases: [8],
+    narrative: "pgvector embeddings, LLM chat agent, forgotten favourites, Tidal playlist export. The endgame."
+  }
+];
 
-<div class="alert alert-info">
-  <div class="alert-title">Previously resolved</div>
-  March drift (human-hum-tqv/#18, human-hum-xyr/#6, human-hum-8xn/#5) was cleaned up. Stale deps on #5 removed.
-  Note: #38 was closed on GitHub by Sandcastle but has no corresponding Beads issue (it was only tracked in GitHub).
-</div>
+const directionText = `
+  The project follows a <strong>deliberate arc</strong>: get the data in → make it browsable → make it rich → make it smart.<br><br>
+  <strong>Phases 1–3</strong> (done) built the <em>data pipeline</em> — 147k scrobbles imported, incremental sync working, auto-sync on page visit.<br>
+  <strong>Phase 4</strong> (active) made the data <em>browsable</em> — scrobbles, artists, albums with cross-linked navigation. Two items remain: Now Playing banner and catch-up spinner.<br>
+  <strong>Album enrichment</strong> (next) makes the data <em>rich</em> — artwork, track numbers, durations. This is the bridge from "data viewer" to "music app." On-demand enrichment via LastFM, with an <code>album_tracks</code> bridge table to show complete album tracklists.<br>
+  <strong>Phase 5</strong> (unblocked) adds <em>insights</em> — stats dashboard, charts, listening patterns.<br>
+  <strong>Phases 6–8</strong> (HITL) are the long-term vision: auth → multi-source → AI discovery. Each unlocks the next. The endgame is "make a playlist of my forgotten favourite tracks."
+`;
 
-<!-- ───────────── Architecture ───────────── -->
+// --- State ---
+let activeFilter = null;
+let selectedIssue = null;
 
-<h2><span class="num">8</span> Architecture Snapshot</h2>
+// --- Derived data ---
+const issueMap = Object.fromEntries(issues.map(i => [i.num, i]));
+const closedCount = issues.filter(i => i.state === "closed").length;
+const openCount = issues.filter(i => i.state === "open").length;
+const readyCount = issues.filter(i => i.state === "open" && !i.hitl && (!i.blockedBy || i.blockedResolved) && !i.epic).length;
+const hitlCount = issues.filter(i => i.hitl).length;
+const agentCount = issues.filter(i => i.agent === "sandcastle").length;
 
-<div class="stack-grid">
-  <div class="stack-item">
-    <div class="stack-label">Framework</div>
-    <div class="stack-value">Next.js 16</div>
-    <div class="stack-detail">React 19, Turbopack</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Database</div>
-    <div class="stack-value">Neon</div>
-    <div class="stack-detail">Serverless Postgres</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">ORM</div>
-    <div class="stack-value">Drizzle</div>
-    <div class="stack-detail">SQL-first, 57KB</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Monorepo</div>
-    <div class="stack-value">pnpm + Turbo</div>
-    <div class="stack-detail">apps/web, packages/db, packages/ui</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">UI</div>
-    <div class="stack-value">shadcn/ui</div>
-    <div class="stack-detail">55 components, base-maia</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Styling</div>
-    <div class="stack-value">Tailwind v4</div>
-    <div class="stack-detail">OKLch colour system</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Schema</div>
-    <div class="stack-value">Star schema</div>
-    <div class="stack-detail">artists, albums, tracks, scrobbles</div>
-  </div>
-  <div class="stack-item">
-    <div class="stack-label">Data</div>
-    <div class="stack-value">147k scrobbles</div>
-    <div class="stack-detail">~5k tracks, ~1.5k artists</div>
-  </div>
-</div>
+// --- Render functions ---
 
-<!-- ───────────── Key Decisions ───────────── -->
+function renderHeaderStats() {
+  const el = document.getElementById("headerStats");
+  const stats = [
+    { label: `${closedCount} closed`, cls: "dot-green", filter: "closed" },
+    { label: `${openCount} open`, cls: "dot-amber", filter: "open" },
+    { label: `${readyCount} ready for agent`, cls: "dot-blue", filter: "ready" },
+    { label: `${hitlCount} needs human`, cls: "dot-red", filter: "hitl" }
+  ];
+  el.innerHTML = stats.map(s =>
+    `<div class="stat${activeFilter === s.filter ? ' active' : ''}" onclick="toggleFilter('${s.filter}')">
+      <div class="stat-dot ${s.cls}"></div>${s.label}
+    </div>`
+  ).join("");
+}
 
-<h2><span class="num">9</span> Key Architecture Decisions</h2>
+function renderSummary() {
+  const el = document.getElementById("summaryGrid");
+  const cards = [
+    { label: "Total Issues", value: issues.length, cls: "", detail: `${closedCount} closed · ${openCount} open`, filter: null },
+    { label: "Completion", value: Math.round(closedCount / issues.length * 100) + "%", cls: "green", detail: "Phases 1–3 done, Phase 4 active", filter: "closed" },
+    { label: "Ready for AFK", value: readyCount, cls: "blue", detail: issues.filter(i => i.state === "open" && !i.hitl && (!i.blockedBy || i.blockedResolved) && !i.epic).map(i => `#${i.num}`).join(" · "), filter: "ready" },
+    { label: "Needs Human", value: hitlCount, cls: "red", detail: issues.filter(i => i.hitl).map(i => `#${i.num}`).join(" · "), filter: "hitl" },
+    { label: "Sandcastle", value: agentCount, cls: "amber", detail: "Autonomous completions", filter: "agent" }
+  ];
+  el.innerHTML = cards.map(c =>
+    `<div class="summary-card${activeFilter === c.filter ? ' active' : ''}" onclick="toggleFilter(${c.filter ? `'${c.filter}'` : 'null'})">
+      <div class="label">${c.label}</div>
+      <div class="value ${c.cls}">${c.value}</div>
+      <div class="detail">${c.detail}</div>
+    </div>`
+  ).join("");
+}
 
-<table class="decisions-table">
-  <thead>
-    <tr>
-      <th>Decision</th>
-      <th>Choice</th>
-      <th>Rationale</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Primary keys</td>
-      <td>Integer (GENERATED ALWAYS)</td>
-      <td>Single instance, no distributed IDs needed. 4B vs 16B (UUID), faster joins.</td>
-    </tr>
-    <tr>
-      <td>MBIDs</td>
-      <td>Nullable, non-unique</td>
-      <td>LastFM MBIDs are inconsistent. Store as metadata, not identity.</td>
-    </tr>
-    <tr>
-      <td>Album relationship</td>
-      <td>Album on scrobble, not track</td>
-      <td>Same track appears on different albums. Scrobble = "track X from album Y at time T".</td>
-    </tr>
-    <tr>
-      <td>Sync trigger</td>
-      <td>CLI + auto-sync on page visit</td>
-      <td>Silent probe on mount, then conditional import. Two modes: silent (&le;1 page) and catch-up with spinner.</td>
-    </tr>
-    <tr>
-      <td>Query layer</td>
-      <td>Named functions, no repository</td>
-      <td>Explicit db injection. Each function independently evolvable. Split at ~300 lines.</td>
-    </tr>
-    <tr>
-      <td>Ingestion separation</td>
-      <td>recordListen() &ne; importScrobbles()</td>
-      <td>recordListen is stable primitive (entity resolution). importScrobbles is orchestration (pagination, sync).</td>
-    </tr>
-    <tr>
-      <td>Auth</td>
-      <td>Better Auth &mdash; deferred to Phase 6</td>
-      <td>Don't block first scrobble on auth plumbing.</td>
-    </tr>
-    <tr>
-      <td>Playlist export</td>
-      <td>Tidal, not Spotify</td>
-      <td>Spotify deprecated public playlist creation. Tidal = ingestion source + playlist output.</td>
-    </tr>
-  </tbody>
-</table>
+function renderRoadmap() {
+  const el = document.getElementById("roadmap");
+  el.innerHTML = roadmapStages.map(stage => {
+    const barCls = `bar-${stage.status}`;
+    const stageCls = `stage-${stage.status}`;
+    const isActive = stage.status === "active";
+    return `<div class="roadmap-stage ${stageCls}" onclick="showStageNarrative('${stage.id}')">
+      <div class="roadmap-bar ${barCls}"></div>
+      <div class="roadmap-label">${stage.label}${isActive ? '<span class="roadmap-now">now</span>' : ''}</div>
+      <div class="roadmap-sub">${stage.sub}</div>
+    </div>`;
+  }).join("");
 
-<footer>
-  Updated 2026-05-10 &middot; Human Hum Project Audit &middot; 31 total issues &middot; 23 closed &middot; 8 open &middot; 3 Sandcastle completions
-</footer>
+  document.getElementById("directionNarrative").innerHTML = directionText;
+}
 
+function showStageNarrative(stageId) {
+  const stage = roadmapStages.find(s => s.id === stageId);
+  if (!stage) return;
+  const el = document.getElementById("directionNarrative");
+  el.innerHTML = `<strong>${stage.label}</strong> — ${stage.narrative}`;
+  el.style.borderColor = "var(--accent)";
+  setTimeout(() => el.style.borderColor = "", 1500);
+
+  const phaseEl = document.getElementById(`phase-${stage.phases[0]}`);
+  if (phaseEl) {
+    phaseEl.classList.add("open");
+    phaseEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function renderFilters() {
+  const el = document.getElementById("filterBar");
+  const labels = [...new Set(issues.flatMap(i => i.labels))].sort();
+  el.innerHTML = `<div class="filter-chip${!activeFilter ? ' active' : ''}" onclick="toggleFilter(null)">All</div>` +
+    ["closed", "open", "ready", "hitl", "agent"].map(f =>
+      `<div class="filter-chip${activeFilter === f ? ' active' : ''}" onclick="toggleFilter('${f}')">${f}</div>`
+    ).join("");
+}
+
+function matchesFilter(issue) {
+  if (!activeFilter) return true;
+  if (activeFilter === "closed") return issue.state === "closed";
+  if (activeFilter === "open") return issue.state === "open";
+  if (activeFilter === "ready") return issue.state === "open" && !issue.hitl && (!issue.blockedBy || issue.blockedResolved) && !issue.epic;
+  if (activeFilter === "hitl") return issue.hitl;
+  if (activeFilter === "agent") return issue.agent === "sandcastle";
+  return issue.labels.includes(activeFilter);
+}
+
+function renderIssueRow(issue) {
+  const dimmed = !matchesFilter(issue) && activeFilter ? " dimmed" : "";
+  let statusCls, statusText;
+  if (issue.state === "closed") { statusCls = "status-closed"; statusText = "Closed"; }
+  else if (issue.hitl) { statusCls = "status-hitl"; statusText = "HITL"; }
+  else if (issue.blockedBy && !issue.blockedResolved) { statusCls = "status-blocked"; statusText = "Blocked"; }
+  else if (issue.epic) { statusCls = "status-open"; statusText = `Open`; }
+  else { statusCls = "status-ready"; statusText = "Unblocked"; }
+
+  const dateStr = issue.closed ? formatDate(issue.closed) : "";
+  const agentBadge = issue.agent ? ` <span style="font-size:0.6rem;color:var(--amber)">⚙ ${issue.agent}</span>` : "";
+
+  let extra = "";
+  if (issue.blockedBy) {
+    const resolved = issue.blockedResolved;
+    extra += `<div class="issue-blocker${resolved ? ' resolved' : ''}">Blocked by ${issue.blockedBy.map(b => `#${b}`).join(", ")}${resolved ? " — resolved" : ""}</div>`;
+  }
+  if (issue.desc) {
+    extra += `<div class="issue-desc">${issue.desc}</div>`;
+  }
+
+  return `<div class="issue${dimmed}" onclick="openDetail(${issue.num})">
+    <span class="issue-num">#${issue.num}</span>
+    <span class="issue-title-text">${issue.title}${agentBadge}</span>
+    <div class="issue-meta">
+      <span class="issue-status ${statusCls}">${statusText}</span>
+      ${dateStr ? `<span class="issue-date">${dateStr}</span>` : ""}
+    </div>
+    ${extra}
+  </div>`;
+}
+
+function renderPhases() {
+  const el = document.getElementById("phasesContainer");
+  el.innerHTML = phases.map(phase => {
+    const phaseIssues = issues.filter(i => i.phase === phase.id);
+    const closed = phaseIssues.filter(i => i.state === "closed").length;
+    const total = phaseIssues.length;
+    const pct = total > 0 ? Math.round(closed / total * 100) : 0;
+    const badgeCls = `badge-${phase.badge}`;
+    const badgeLabel = phase.badge === "done" ? "Done" : phase.badge === "active" ? "Active" : phase.badge === "hitl" ? "HITL" : "Planned";
+    const isActive = phase.badge === "active" || phase.badge === "planned";
+    const hasFilteredIssues = phaseIssues.some(i => matchesFilter(i));
+    const highlight = activeFilter && hasFilteredIssues ? " highlight" : "";
+
+    return `<div class="phase${isActive ? ' open' : ''}${highlight}" id="phase-${phase.id}">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <div class="phase-title">
+          <span class="phase-badge ${badgeCls}">${badgeLabel}</span>
+          ${typeof phase.id === "number" ? `Phase ${phase.id}` : ""} — ${phase.name}
+        </div>
+        <div class="phase-progress">
+          ${closed}/${total}
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="chevron">&#9654;</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        ${phaseIssues.map(renderIssueRow).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderDepGraph() {
+  const el = document.getElementById("depGraph");
+  const nodes = [
+    { label: "Phase 4 (current)", type: "header" },
+    { num: 38, indent: 1 },
+    { num: 39, indent: 2 },
+    { num: 40, indent: 2 },
+    { num: 7, indent: 1 },
+    { num: 8, indent: 2 },
+    { label: "Album Enrichment (new)", type: "header" },
+    { num: 43, indent: 1 },
+    { label: "Phase 6+", type: "header" },
+    { num: 9, indent: 1 },
+    { num: 10, indent: 2 },
+    { num: 11, indent: 3 }
+  ];
+
+  el.innerHTML = nodes.map(n => {
+    if (n.type === "header") {
+      return `<div style="color:var(--text-muted);font-size:0.75rem;font-weight:600;margin-top:0.75rem;margin-bottom:0.25rem;">${n.label}</div>`;
+    }
+    const issue = issueMap[n.num];
+    let nodeCls;
+    if (issue.state === "closed") nodeCls = "node-done";
+    else if (issue.hitl) nodeCls = "node-hitl";
+    else if (issue.epic && issue.state === "open") nodeCls = "node-open";
+    else if (issue.blockedBy && !issue.blockedResolved) nodeCls = "node-hitl";
+    else nodeCls = "node-ready";
+
+    const indent = n.indent || 0;
+    const prefix = indent === 1 ? "├── " : indent === 2 ? "│   └── " : indent === 3 ? "│       └── " : "";
+    let statusText;
+    if (issue.state === "closed") statusText = `✓ closed ${formatDate(issue.closed)}`;
+    else if (issue.hitl) statusText = "← HITL";
+    else if (issue.blockedBy && !issue.blockedResolved) statusText = `← blocked by #${issue.blockedBy.join(", #")}`;
+    else if (issue.epic) statusText = "← epic, open";
+    else statusText = "← unblocked, ready";
+
+    return `<div class="dep-node" onclick="openDetail(${issue.num})" style="padding-left:${indent * 1.5}rem">
+      <span class="dep-connector">${prefix}</span>
+      <span class="${nodeCls}">#${issue.num} ${issue.title}</span>
+      <span class="dep-status">${statusText}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderTimeline() {
+  const el = document.getElementById("timeline");
+  el.innerHTML = timelineEvents.map(e =>
+    `<div class="timeline-entry${e.milestone ? ' milestone' : ''}${e.current ? ' current' : ''}">
+      <div class="timeline-date">${e.date}</div>
+      <div class="timeline-text">${e.text}</div>
+    </div>`
+  ).join("");
+}
+
+function renderArchitecture() {
+  document.getElementById("archGrid").innerHTML = architecture.map(a =>
+    `<div class="stack-item">
+      <div class="stack-label">${a.label}</div>
+      <div class="stack-value">${a.value}</div>
+      <div class="stack-detail">${a.detail}</div>
+    </div>`
+  ).join("");
+}
+
+function renderDecisions() {
+  document.getElementById("decisionsContainer").innerHTML = `<table class="decisions-table">
+    <thead><tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr></thead>
+    <tbody>${decisions.map(d =>
+      `<tr><td>${d.decision}</td><td>${d.choice}</td><td>${d.rationale}</td></tr>`
+    ).join("")}</tbody>
+  </table>`;
+}
+
+function renderFooter() {
+  const now = new Date().toISOString().split("T")[0];
+  document.getElementById("footer").textContent =
+    `Updated ${now} · Human Hum Project Audit · ${issues.length} total issues · ${closedCount} closed · ${openCount} open · ${agentCount} Sandcastle completions`;
+}
+
+// --- Detail panel ---
+
+function openDetail(num) {
+  const issue = issueMap[num];
+  if (!issue) return;
+  selectedIssue = num;
+
+  let statusCls, statusText;
+  if (issue.state === "closed") { statusCls = "status-closed"; statusText = "Closed"; }
+  else if (issue.hitl) { statusCls = "status-hitl"; statusText = "HITL"; }
+  else if (issue.blockedBy && !issue.blockedResolved) { statusCls = "status-blocked"; statusText = "Blocked"; }
+  else { statusCls = "status-ready"; statusText = "Open"; }
+
+  const phaseName = issue.phase ? phases.find(p => p.id === issue.phase)?.name || issue.phase : "—";
+
+  let relatedHtml = "";
+  if (issue.blockedBy) {
+    relatedHtml += `<div class="detail-section-title">Blocked by</div><div class="detail-links">`;
+    relatedHtml += issue.blockedBy.map(b => {
+      const bi = issueMap[b];
+      return `<span class="detail-link" onclick="openDetail(${b})">#${b} ${bi ? bi.title : ""} ${bi?.state === "closed" ? "✓" : ""}</span>`;
+    }).join("");
+    relatedHtml += `</div>`;
+  }
+
+  const blockers = issues.filter(i => i.blockedBy?.includes(num));
+  if (blockers.length) {
+    relatedHtml += `<div class="detail-section-title">Blocks</div><div class="detail-links">`;
+    relatedHtml += blockers.map(b =>
+      `<span class="detail-link" onclick="openDetail(${b.num})">#${b.num} ${b.title}</span>`
+    ).join("");
+    relatedHtml += `</div>`;
+  }
+
+  document.getElementById("detailContent").innerHTML = `
+    <div class="detail-number">#${issue.num} · ${issue.labels.map(l => `<span class="issue-label">${l}</span>`).join(" ")}</div>
+    <div class="detail-title">${issue.title}</div>
+    <dl class="detail-meta">
+      <dt>Status</dt><dd><span class="issue-status ${statusCls}">${statusText}</span></dd>
+      <dt>Phase</dt><dd>${phaseName}</dd>
+      ${issue.closed ? `<dt>Closed</dt><dd>${formatDate(issue.closed)}</dd>` : ""}
+      ${issue.agent ? `<dt>Agent</dt><dd>${issue.agent}</dd>` : ""}
+      ${issue.epic ? `<dt>Type</dt><dd>Epic</dd>` : ""}
+    </dl>
+    ${issue.desc ? `<div class="detail-section-title">Description</div><div class="detail-desc">${issue.desc}</div>` : ""}
+    ${relatedHtml}
+    <a class="detail-gh-link" href="${REPO_URL}/issues/${issue.num}" target="_blank">Open on GitHub →</a>
+  `;
+
+  document.getElementById("detailPanel").classList.add("open");
+  document.getElementById("detailBackdrop").classList.add("open");
+}
+
+function closeDetail() {
+  document.getElementById("detailPanel").classList.remove("open");
+  document.getElementById("detailBackdrop").classList.remove("open");
+  selectedIssue = null;
+}
+
+// --- Filtering ---
+
+function toggleFilter(filter) {
+  activeFilter = activeFilter === filter ? null : filter;
+  renderAll();
+}
+
+// --- Helpers ---
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// --- Keyboard ---
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeDetail();
+});
+
+// --- Init ---
+
+function renderAll() {
+  renderHeaderStats();
+  renderSummary();
+  renderRoadmap();
+  renderFilters();
+  renderDepGraph();
+  renderPhases();
+  renderTimeline();
+  renderArchitecture();
+  renderDecisions();
+  renderFooter();
+}
+
+renderAll();
+</script>
 
 </body>
 </html>

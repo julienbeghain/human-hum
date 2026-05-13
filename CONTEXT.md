@@ -12,6 +12,7 @@ A personal music scrobbling platform that records listening history from multipl
 | **Track** | A specific recording identified by name and artist | Song, music |
 | **Artist** | A musical performer or group that creates tracks | Band, musician, act |
 | **Album** | A collection of tracks released together by an artist | Record, release, LP |
+| **Track number** | The 1-based position of a track within an album, as defined by the release. Lives in the `album_tracks` bridge table because the same track can appear at different positions on different albums | Track position, index, order |
 | **MusicBrainz ID (MBID)** | An external unique identifier from the MusicBrainz database, used to match entities across sources | External ID, MB ID |
 | **Listening history** | The complete ordered set of a user's scrobbles | Play history, scrobble history, library |
 
@@ -26,6 +27,7 @@ A personal music scrobbling platform that records listening history from multipl
 | **Upsert** | An insert that silently skips if a matching row already exists (deduplication) | Insert-or-ignore, merge |
 | **Cross-source deduplication** | The process of detecting the same listening event reported by multiple sources within a ~30-second window | Dedup, reconciliation |
 | **Now playing** | A LastFM API entry with no timestamp, indicating a track currently being listened to. Skipped during import (no timestamp to record), but displayed in the Now Playing banner | Currently playing, live track |
+| **Enrichment** | A one-time per-entity fetch of metadata (artwork, tracklist, duration) from an external API (e.g. LastFM `album.getInfo`). Triggered on-demand when a user visits an un-enriched entity page. Distinct from import/sync which deal with scrobbles, not entity metadata | Metadata fetch, backfill (reserved for scrobble import) |
 
 ### Schema
 

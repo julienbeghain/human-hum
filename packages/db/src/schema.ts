@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -39,11 +40,30 @@ export const albums = listenSchema.table(
     artistId: integer("artist_id")
       .notNull()
       .references(() => artists.id),
+    imageUrl: text("image_url"),
+    enrichedAt: timestamp("enriched_at", { withTimezone: true }),
     ...timestampsWithoutUpdate,
   },
   (t) => [
     uniqueIndex("albums_name_artist_id_idx").on(t.name, t.artistId),
     index("albums_artist_id_idx").on(t.artistId),
+  ]
+)
+
+export const albumTracks = listenSchema.table(
+  "album_tracks",
+  {
+    albumId: integer("album_id")
+      .notNull()
+      .references(() => albums.id),
+    trackNumber: integer("track_number").notNull(),
+    name: text().notNull(),
+    trackId: integer("track_id").references(() => tracks.id),
+    duration: integer(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.albumId, t.trackNumber] }),
+    index("album_tracks_track_id_idx").on(t.trackId),
   ]
 )
 

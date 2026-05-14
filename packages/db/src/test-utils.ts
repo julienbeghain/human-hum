@@ -23,6 +23,8 @@ const DDL = `
     "name" text NOT NULL,
     "mbid" varchar(36),
     "artist_id" integer NOT NULL REFERENCES "listen"."artists"("id"),
+    "image_url" text,
+    "enriched_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL,
     "deleted_at" timestamp with time zone
   );
@@ -37,6 +39,16 @@ const DDL = `
     "deleted_at" timestamp with time zone
   );
   CREATE UNIQUE INDEX "tracks_name_artist_id_idx" ON "listen"."tracks" ("name", "artist_id");
+
+  CREATE TABLE "listen"."album_tracks" (
+    "album_id" integer NOT NULL REFERENCES "listen"."albums"("id"),
+    "track_number" integer NOT NULL,
+    "name" text NOT NULL,
+    "track_id" integer REFERENCES "listen"."tracks"("id"),
+    "duration" integer,
+    PRIMARY KEY ("album_id", "track_number")
+  );
+  CREATE INDEX "album_tracks_track_id_idx" ON "listen"."album_tracks" ("track_id");
 
   CREATE TABLE "listen"."scrobbles" (
     "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

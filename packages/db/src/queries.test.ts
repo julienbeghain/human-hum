@@ -21,11 +21,8 @@ let client: PGlite
 let db: Database
 
 // Known IDs populated during seed — avoids chaining queries to discover them
-let aphexTwinId: number
 let boardsOfCanadaId: number
-let autechreId: number
 let mhtrtcAlbumId: number
-let drukqsAlbumId: number
 
 // Scrobble IDs for detail tests
 let windowlickerScrobbleId: number
@@ -50,17 +47,15 @@ beforeAll(async () => {
     listenedAt: new Date("2026-01-15T20:00:00Z"),
     source: "lastfm",
   })
-  aphexTwinId = r1.artistId
   windowlickerScrobbleId = r1.scrobbleId
 
-  const r2 = await recordListen(db, {
+  await recordListen(db, {
     artist: { name: "Aphex Twin" },
     track: { name: "Vordhosbn" },
     album: { name: "Drukqs" },
     listenedAt: new Date("2026-03-01T12:00:00Z"),
     source: "lastfm",
   })
-  drukqsAlbumId = r2.albumId!
 
   const r3 = await recordListen(db, {
     artist: { name: "Boards of Canada" },
@@ -81,13 +76,12 @@ beforeAll(async () => {
     source: "lastfm",
   })
 
-  const r5 = await recordListen(db, {
+  await recordListen(db, {
     artist: { name: "Autechre" },
     track: { name: "Clipper" },
     listenedAt: new Date("2020-01-01T00:00:00Z"),
     source: "spotify",
   })
-  autechreId = r5.artistId
 
   await recordListen(db, {
     artist: { name: "Autechre" },

@@ -1,3 +1,4 @@
+<!-- bd-doctor-divergence: ok -->
 # Human Hum
 
 A personal music scrobbling platform — records listening history and surfaces insights. Built as a pnpm monorepo with Next.js 16, Drizzle ORM, and Neon Postgres.

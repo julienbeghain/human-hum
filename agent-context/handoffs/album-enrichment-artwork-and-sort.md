@@ -1,6 +1,6 @@
 # Handoff: Album Enrichment — Artwork & Sort Toggle Remain
 
-**Date**: 2026-05-16 17:25
+**Date**: 2026-05-16 17:28
 **Branch**: feat/album-tracks-schema
 
 ## Goal
@@ -16,14 +16,13 @@ This session completed:
 - `createDefaultFetcher()` throws if `LASTFM_API_KEY` is missing (configuration error, not silent skip)
 - Album page simplified to `enrichAlbum(db, { albumId })` — no API key wiring
 - Beads `human-hum-e57` closed
-- **Changes are uncommitted** — 2 files modified, needs commit + push
+- Committed as `6f24770` and pushed
 
 ## What's Left
-1. **Commit + push** the fetcher refactor (2 files, `git diff --stat` for details)
-2. **`human-hum-3lv`** (GH #47) — Album artwork via Next.js `<Image>` with null fallback
-3. **`human-hum-3tj`** (GH #48) — `"use client"` sortable track table + duration column
-4. These two are independent — can be done in either order
-5. After both: Step 7 (test review), Step 8 (sync back to GH), Step 9 (wrap up) per the feature workflow
+1. **`human-hum-3lv`** (GH #47) — Album artwork via Next.js `<Image>` with null fallback
+2. **`human-hum-3tj`** (GH #48) — `"use client"` sortable track table + duration column
+3. These two are independent — can be done in either order
+4. After both: Step 7 (test review), Step 8 (sync back to GH), Step 9 (wrap up) per the feature workflow
 
 ## Key Decisions
 - Enrichment fetcher is absorbed into `enrichAlbum` — the module owns its external dependency (deep module principle)

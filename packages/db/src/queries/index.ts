@@ -5,6 +5,7 @@ export { getStats } from "./stats"
 export { getListeningClock, getTimeSeries } from "./time-series"
 export type {
   AlbumDetail,
+  AlbumDetailTrack,
   ArtistDetail,
   ArtistRanking,
   GetAlbumDetailParams,

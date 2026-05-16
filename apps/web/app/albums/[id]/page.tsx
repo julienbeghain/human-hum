@@ -2,6 +2,10 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
+import {
+  enrichAlbum,
+  LastfmAlbumInfoFetcher,
+} from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
 import {
   Table,
@@ -20,9 +24,19 @@ export default async function AlbumDetailPage(props: {
 
   if (!Number.isFinite(albumId) || albumId < 1) notFound()
 
-  const album = await getAlbumDetail(db, { albumId })
+  let album = await getAlbumDetail(db, { albumId })
 
   if (!album) notFound()
+
+  if (!album.enrichedAt) {
+    try {
+      const fetcher = new LastfmAlbumInfoFetcher(process.env.LASTFM_API_KEY!)
+      await enrichAlbum(db, { albumId, fetcher })
+      album = (await getAlbumDetail(db, { albumId }))!
+    } catch {
+      // Enrichment failed — render with scrobble-derived fallback
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -51,9 +65,9 @@ export default async function AlbumDetailPage(props: {
             </TableHeader>
             <TableBody>
               {album.tracks.map((track, index) => (
-                <TableRow key={track.trackId}>
+                <TableRow key={track.trackId ?? `unmatched-${index}`}>
                   <TableCell className="text-muted-foreground">
-                    {index + 1}
+                    {track.trackNumber ?? index + 1}
                   </TableCell>
                   <TableCell>{track.trackName}</TableCell>
                   <TableCell className="text-right text-muted-foreground">

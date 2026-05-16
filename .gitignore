@@ -39,11 +39,7 @@ npm-debug.log*
 .dolt/
 *.db
 
-# Beads runtime files (change every session, synced via bd dolt push/pull)
-.beads/backup/
-.beads/dolt-server.log
-.beads/dolt/**/noms/
-.mcp.json
-
-# Beads / Dolt files (added by bd init)
+# Beads (local issue tracker — not synced via git)
+.beads/
 .beads-credential-key
+.mcp.json

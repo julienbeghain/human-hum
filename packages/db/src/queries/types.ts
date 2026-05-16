@@ -90,13 +90,23 @@ export type GetAlbumDetailParams = ScrobbleFilter & {
   albumId: number
 }
 
+export type AlbumDetailTrack = {
+  trackId: number | null
+  trackName: string
+  playCount: number
+  trackNumber: number | null
+  duration: number | null
+}
+
 export type AlbumDetail = {
   albumId: number
   albumName: string
   artistId: number
   artistName: string
   playCount: number
-  tracks: { trackId: number; trackName: string; playCount: number }[]
+  enrichedAt: Date | null
+  imageUrl: string | null
+  tracks: AlbumDetailTrack[]
 }
 
 // --- Time series ---

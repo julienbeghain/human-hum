@@ -1,65 +1,74 @@
-# Handoff: Album Enrichment — Ready to Implement
+# Handoff: Album Enrichment — Enrichment Module Done, Query Integration Next
 
-**Date**: 2026-05-13 16:00
-**Branch**: main
+**Date**: 2026-05-16 15:45
+**Branch**: feat/album-tracks-schema
 
 ## Goal
-Implement on-demand album enrichment for `/albums/[id]` — artwork, track numbers, duration — fetched from LastFM's `album.getInfo` API. This makes the album page feel like a music app instead of a data table.
+On-demand album enrichment for `/albums/[id]` — artwork, track ordering, duration from LastFM `album.getInfo`. Makes the album page feel like a record sleeve instead of a data table.
 
 ## Current State
-Design phase is complete. All artifacts are committed and pushed. No code has been written yet — the next session starts implementation from phase 1.
+Phase 1 is fully complete (schema + enrichment module). Working tree is clean except beads metadata. No PR opened yet — the branch has more work ahead.
 
-**What was produced this session:**
-- PRD published as GitHub issue #43
-- ADR 0001 written (album_tracks bridge table rationale)
-- CONTEXT.md updated with "Track number" and "Enrichment" glossary terms
-- 4-phase implementation plan filed
-- Project audit rebuilt as interactive data-driven dashboard
+**Done (5 commits on branch):**
+- Drizzle migration `0003_exotic_wolf_cub.sql` adds `image_url` + `enriched_at` to `albums`, creates `album_tracks` bridge table
+- `schema.ts` updated with `albumTracks` table definition
+- 7 schema tests in `schema.test.ts`
+- `enrichment.ts`: `AlbumInfoFetcher` interface, `LastfmAlbumInfoFetcher` class, `enrichAlbum` deep module
+- `enrichment.test.ts`: 7 PGLite + fake fetcher tests (success, idempotency, track matching, unmatched tracks, failure, no-artwork, empty tracklist)
+- Test DDL derived from Drizzle migration files in `test-utils.ts`
+- Beads issues `human-hum-ebq` and `human-hum-4z3` closed
+
+**Still open on GitHub:**
+- GH #44 (schema) — work done, needs closing on GitHub
+- GH #45 (enrichment module) — work done, needs closing on GitHub
 
 ## What's Left
-All four implementation phases, in order:
+In dependency order:
 
-1. **Phase 1: Schema + enrichment module** — Drizzle migration, `AlbumInfoFetcher` port, `enrichAlbum` deep module, PGLite tests
-2. **Phase 2: Query + page integration** — update `getAlbumDetail`, trigger enrichment on page visit, tracks in album order
-3. **Phase 3: Artwork** — display cover art via Next.js `<Image>`
-4. **Phase 4: Sort toggle + duration** — `"use client"` sortable table component, duration column
-
-Suggest breaking these into GitHub sub-issues via `/to-issues` before starting implementation.
+1. **Close GH #44 and #45** — work already committed, just need GitHub issue closure
+2. **`human-hum-iky`** (GH #46) — Query + page integration:
+   - Update `getAlbumDetail` for enriched/un-enriched paths
+   - Trigger enrichment on page visit when `enriched_at` is null
+   - Render tracks in album order
+3. **`human-hum-3lv`** (GH #47) — Album artwork via Next.js `<Image>`
+4. **`human-hum-3tj`** (GH #48) — `"use client"` sortable track table + duration column
 
 ## Key Decisions
-- **`album_tracks` bridge table** with stored `name` + nullable `track_id` — full tracklist from API, not just scrobbled tracks. PK is `(album_id, track_number)`. See ADR 0001.
-- **`enriched_at` timestamp** on `albums` — separates "has been enriched" from "has artwork". Prevents re-fetching albums with no LastFM art.
-- **On-demand enrichment** — triggered in the server component when `enriched_at IS NULL`. No bulk CLI command.
-- **Failure = no `enriched_at`** — retries on next visit. Page degrades to scrobble-derived tracklist.
-- **`AlbumInfoFetcher` port** — injected into `enrichAlbum`, mockable (true external dependency pattern from deep-modules.md).
-- **Client-side sort** — `"use client"` leaf component for the track table toggle. No server round-trip.
-- **DB can be wiped** — don't over-constrain to avoid backwards-incompatible changes. This is an incremental build.
+- `album_tracks` PK is `(album_id, track_number)` — unscrobbled tracks have no track_id. See `docs/adr/0001-album-tracks-bridge-table.md`
+- `enriched_at` separates "has been enriched" from "has artwork"
+- Failure does NOT set `enriched_at` — retries on next visit
+- `AlbumInfoFetcher` is a port interface; `LastfmAlbumInfoFetcher` is the adapter
+- Track matching: exact name + same artist. Fuzzy matching deferred.
+- Scrobble counts always computed at query time via LEFT JOIN, never stored
+- `enrichAlbum` propagates fetcher errors (doesn't swallow them) — caller decides error UX
 
 ## Gotchas
-- Track names from `album.getInfo` may not exactly match tracks in the `tracks` table (casing, remaster suffixes). Initial strategy is exact match + same artist. Fuzzy matching deferred.
-- `scrobbles.album_id` is nullable — some scrobbles have no album. The enrichment query must handle this.
-- The existing `getAlbumDetail` derives tracks from scrobbles via GROUP BY. The enriched path uses `album_tracks` with a LEFT JOIN for live counts — completely different query shape.
-- `LastfmFetcher` in `packages/db/src/importers/lastfm.ts` already has retry + rate limiting for `user.getRecentTracks`. The new `AlbumInfoFetcher` is a separate interface — don't conflate the two.
+- Track names from `album.getInfo` may not match `tracks` table entries (casing, remaster suffixes). Exact match only for now.
+- `scrobbles.album_id` is nullable — some scrobbles have no album. Enrichment queries must handle this.
+- `getAlbumDetail` in `packages/db/src/queries/albums.ts` currently derives tracks from scrobbles via GROUP BY. The enriched path is a completely different query shape (from `album_tracks` with LEFT JOIN).
+- LastFM `tracks.track` can be a single object (not array) when album has 1 track — `LastfmAlbumInfoFetcher` handles this.
 
 ## Active Workflow
+- `/feature-workflow` Step 6 (Build) — `human-hum-iky` is next ready issue
 - Plan: `agent-context/plans/2026-05-13-issue-43-album-enrichment.md`
 - PRD: https://github.com/julienbeghain/human-hum/issues/43
 - ADR: `docs/adr/0001-album-tracks-bridge-table.md`
 
 ## Suggested Skills
-- `/to-issues` — break the 4-phase plan into GitHub sub-issues under #43
-- `/feature-dev` — implement each phase
-- `/tdd-loop` — phase 1 (enrichment module) is well-scoped for autonomous TDD
+- `/feature-dev` — for `human-hum-iky` (query changes + page integration requires understanding both DB queries and the React page)
+- `/tdd-loop` — could work for just the query changes portion if scoped tightly
 
 ## Beads Issues
-No beads issues for this work yet. GitHub #43 is the tracker. Consider `/gh-to-beads` to import.
-
-Open beads (unrelated): `human-hum-8f7` (Stats dashboard), `human-hum-vsa` (Auth), `human-hum-ixc` (Spotify), `human-hum-irq` (AI).
+**Album enrichment epic:**
+- `human-hum-ebq` — Schema migration (closed)
+- `human-hum-4z3` — Enrichment module (closed)
+- `human-hum-iky` — Query + page integration (open, **unblocked**, next up)
+- `human-hum-3lv` — Album artwork (open, blocked by iky)
+- `human-hum-3tj` — Sort toggle + duration (open, blocked by iky)
 
 ## Files of Interest
-- `packages/db/src/schema.ts` — current schema, migration target
-- `packages/db/src/queries/albums.ts` — `getAlbumDetail` to modify
-- `packages/db/src/importers/lastfm.ts` — existing LastFM API patterns (retry, rate limiting)
-- `apps/web/app/albums/[id]/page.tsx` — current album detail page
-- `.claude/deep-modules.md` — architecture principles (port injection, test strategy)
-- `.claude/architecture.md` — key design decisions
+- `packages/db/src/enrichment.ts` — the enrichment module just built (interface + orchestrator)
+- `packages/db/src/enrichment.test.ts` — 7 tests as examples of the testing pattern
+- `packages/db/src/queries/albums.ts` — current `getAlbumDetail` (to be modified next)
+- `apps/web/app/albums/[id]/page.tsx` — album detail page (to be modified next)
+- `packages/db/src/schema.ts` — schema with `albumTracks` table (lines 53-68)

@@ -60,6 +60,7 @@ A personal music scrobbling platform that records listening history from multipl
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
 | **User** | An authenticated identity in the system — before auth is added, the system is implicitly single-user | Account, listener, member |
+| **Follow** | A directional relationship where one user gains visibility into another's scrobbles. Asymmetric — A following B does not imply B following A | Friend, contact, connection |
 
 ## Relationships
 
@@ -69,6 +70,7 @@ A personal music scrobbling platform that records listening history from multipl
 - An **Artist**, **Album**, and **Track** may each have an optional **MBID**
 - A **Scrobble** is uniquely identified by its `(track_id, listened_at)` pair — this is the deduplication key
 - A **User** owns zero or more **Scrobbles** (once auth is added)
+- A **Follow** links one **User** (follower) to another **User** (followed) — grants full read access to the followed user's scrobbles
 - A **Playlist export** transforms a list of **Tracks** into a playable Tidal playlist
 
 ## Flagged ambiguities

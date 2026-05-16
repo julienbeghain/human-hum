@@ -33,7 +33,7 @@ interface LastfmAlbumInfoResponse {
   }
 }
 
-export class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
+class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
   constructor(private readonly apiKey: string) {}
 
   async getAlbumInfo(params: {
@@ -80,11 +80,22 @@ export class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
   }
 }
 
+function createDefaultFetcher(): AlbumInfoFetcher {
+  const apiKey = process.env.LASTFM_API_KEY
+  if (!apiKey) {
+    throw new Error("LASTFM_API_KEY environment variable is not set")
+  }
+  return new LastfmAlbumInfoFetcher(apiKey)
+}
+
 export async function enrichAlbum(
   db: Database,
-  opts: { albumId: number; fetcher: AlbumInfoFetcher }
+  opts: { albumId: number; fetcher?: AlbumInfoFetcher }
 ): Promise<void> {
-  const { albumId, fetcher } = opts
+  const { albumId } = opts
+
+  const fetcher =
+    opts.fetcher ?? createDefaultFetcher()
 
   const [album] = await db
     .select({

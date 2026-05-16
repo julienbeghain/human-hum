@@ -2,10 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
-import {
-  enrichAlbum,
-  LastfmAlbumInfoFetcher,
-} from "@workspace/db/enrichment"
+import { enrichAlbum } from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
 import {
   Table,
@@ -30,8 +27,7 @@ export default async function AlbumDetailPage(props: {
 
   if (!album.enrichedAt) {
     try {
-      const fetcher = new LastfmAlbumInfoFetcher(process.env.LASTFM_API_KEY!)
-      await enrichAlbum(db, { albumId, fetcher })
+      await enrichAlbum(db, { albumId })
       album = (await getAlbumDetail(db, { albumId }))!
     } catch {
       // Enrichment failed — render with scrobble-derived fallback

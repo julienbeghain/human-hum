@@ -43,3 +43,6 @@ npm-debug.log*
 .beads/
 .beads-credential-key
 .mcp.json
+
+# Agent context (handoffs, plans — local only)
+agent-context/

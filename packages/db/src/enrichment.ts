@@ -1,7 +1,16 @@
-import { and, eq } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 
 import type { Database } from "./index"
 import * as schema from "./schema"
+
+export function normalizeTrackName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s*\(([^)]+)\)\s*/g, " $1 ")
+    .replace(/\s+-\s+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
 
 export interface AlbumInfoResult {
   imageUrl: string | null
@@ -133,28 +142,25 @@ export async function enrichAlbum(
     .where(eq(schema.albums.id, albumId))
 
   if (result.tracks.length > 0) {
-    const trackRows = await Promise.all(
-      result.tracks.map(async (t) => {
-        const [match] = await db
-          .select({ id: schema.tracks.id })
-          .from(schema.tracks)
-          .where(
-            and(
-              eq(schema.tracks.name, t.name),
-              eq(schema.tracks.artistId, album.artistId)
-            )
-          )
-          .limit(1)
+    const artistTracks = await db
+      .select({ id: schema.tracks.id, name: schema.tracks.name })
+      .from(schema.tracks)
+      .where(eq(schema.tracks.artistId, album.artistId))
 
-        return {
-          albumId,
-          trackNumber: t.trackNumber,
-          name: t.name,
-          trackId: match?.id ?? null,
-          duration: t.duration,
-        }
-      })
-    )
+    const trackRows = result.tracks.map((t) => {
+      const normalized = normalizeTrackName(t.name)
+      const match = artistTracks.find(
+        (at) => normalizeTrackName(at.name) === normalized
+      )
+
+      return {
+        albumId,
+        trackNumber: t.trackNumber,
+        name: t.name,
+        trackId: match?.id ?? null,
+        duration: t.duration,
+      }
+    })
 
     await db.insert(schema.albumTracks).values(trackRows)
   }

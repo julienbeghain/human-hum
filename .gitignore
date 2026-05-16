@@ -44,3 +44,6 @@ npm-debug.log*
 .beads/dolt-server.log
 .beads/dolt/**/noms/
 .mcp.json
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key

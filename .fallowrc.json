@@ -5,5 +5,12 @@
       "**/*.test.*",
       "**/*.spec.*"
     ]
-  }
+  },
+  "ignoreDependencies": [
+    "zod",
+    "postcss-load-config"
+  ],
+  "ignorePatterns": [
+    ".sandcastle/**"
+  ]
 }

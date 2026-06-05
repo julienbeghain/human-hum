@@ -1,16 +1,18 @@
 # Git Workflow
 
-Solo project, team discipline. Main is always deployable. All changes go through feature branches and PRs — no exceptions.
+Solo project. Main is always deployable. Commit directly to `main` for everyday work; reach for a feature branch + PR only when a larger change benefits from review or CI gating.
 
 ## Branch Rules
 
-- **Never push directly to `main`** — always open a PR
+- **Direct commits/pushes to `main` are allowed** — feature branches + PRs are optional
 - **Never force-push to `main`**
 - Branch naming: `<type>/<short-description>` (e.g., `feat/db-setup`, `fix/sidebar-hydration`)
 - Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 - One concern per branch — don't mix unrelated changes
 
-## PR Workflow
+## PR Workflow (optional)
+
+When you do choose a PR for a larger change:
 
 1. Create a feature branch from `main`
 2. Make commits (conventional commit messages, see below)

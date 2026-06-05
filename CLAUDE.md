@@ -24,6 +24,23 @@ A personal music scrobbling platform — records listening history and surfaces 
 - Run `pnpm typecheck && pnpm lint` before every commit
 - One Beads task per context window — see [Agent Workflow](.claude/agent-workflow.md)
 
+## Working Style
+
+- **Surgical edits** — change only what the task requires; don't touch unrelated code or rename incidentally.
+- **No speculative abstractions** — build for the requirement in front of you, not a hypothetical future. Prefer the simple solution. When depth *is* warranted, see [Deep Module Principles](.claude/deep-modules.md).
+- **Fix causes, not symptoms** — never hide or suppress errors with weak workarounds.
+- **Plan before multi-step work** — break it into sequential steps and capture the plan in the Beads task before implementing.
+- **Surface ambiguity, don't guess** — when a requirement is genuinely unclear, file it (`bd create`) or flag it for a human (`bd human <id>`) rather than inventing an answer.
+
+## Documentation Discipline
+
+Keep prose to the strict minimum — prefer self-explanatory code over comments.
+
+- **Design rationale → ADRs** (`docs/adr/NNNN-title.md`), not scattered notes or heavy comments
+- **Domain language → [CONTEXT.md](CONTEXT.md)**; **plans & handoffs → `agent-context/`**
+- Add a code comment only for a genuinely non-obvious *why* that renaming or restructuring can't make clear — never to narrate *what* the code does
+- Don't create new `.md` files under `apps/` or `packages/`
+
 ## Guidelines
 
 - [Agent Workflow](.claude/agent-workflow.md)

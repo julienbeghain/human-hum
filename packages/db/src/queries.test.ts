@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "./index"
+import { enrichAlbum } from "./enrichment"
 import { recordListen } from "./ingestion"
 import {
   getAlbumDetail,
@@ -21,11 +22,8 @@ let client: PGlite
 let db: Database
 
 // Known IDs populated during seed — avoids chaining queries to discover them
-let aphexTwinId: number
 let boardsOfCanadaId: number
-let autechreId: number
 let mhtrtcAlbumId: number
-let drukqsAlbumId: number
 
 // Scrobble IDs for detail tests
 let windowlickerScrobbleId: number
@@ -50,17 +48,15 @@ beforeAll(async () => {
     listenedAt: new Date("2026-01-15T20:00:00Z"),
     source: "lastfm",
   })
-  aphexTwinId = r1.artistId
   windowlickerScrobbleId = r1.scrobbleId
 
-  const r2 = await recordListen(db, {
+  await recordListen(db, {
     artist: { name: "Aphex Twin" },
     track: { name: "Vordhosbn" },
     album: { name: "Drukqs" },
     listenedAt: new Date("2026-03-01T12:00:00Z"),
     source: "lastfm",
   })
-  drukqsAlbumId = r2.albumId!
 
   const r3 = await recordListen(db, {
     artist: { name: "Boards of Canada" },
@@ -81,13 +77,12 @@ beforeAll(async () => {
     source: "lastfm",
   })
 
-  const r5 = await recordListen(db, {
+  await recordListen(db, {
     artist: { name: "Autechre" },
     track: { name: "Clipper" },
     listenedAt: new Date("2020-01-01T00:00:00Z"),
     source: "spotify",
   })
-  autechreId = r5.artistId
 
   await recordListen(db, {
     artist: { name: "Autechre" },
@@ -339,6 +334,15 @@ describe("getAlbumDetail", () => {
     expect(album!.tracks.length).toBe(2)
   })
 
+  it("returns tracks in play-count order with null enrichment fields when un-enriched", async () => {
+    const album = await getAlbumDetail(db, { albumId: mhtrtcAlbumId })
+    expect(album!.enrichedAt).toBeNull()
+    expect(album!.imageUrl).toBeNull()
+    expect(album!.tracks[0]!.trackNumber).toBeNull()
+    expect(album!.tracks[0]!.duration).toBeNull()
+    expect(album!.tracks[0]!.playCount).toBeGreaterThanOrEqual(album!.tracks[1]!.playCount)
+  })
+
   it("returns null for non-existent album", async () => {
     const album = await getAlbumDetail(db, { albumId: 99999 })
     expect(album).toBeNull()
@@ -403,5 +407,107 @@ describe("getListeningClock", () => {
 
     const zeroHours = clock.filter((s) => s.count === 0)
     expect(zeroHours.length).toBe(18)
+  })
+})
+
+// --- getAlbumDetail (enriched) ---
+
+describe("getAlbumDetail (enriched album)", () => {
+  let enrichedDb: Database
+  let enrichedClient: PGlite
+  let enrichedAlbumId: number
+
+  beforeAll(async () => {
+    ;({ db: enrichedDb, client: enrichedClient } = await setupTestDb())
+
+    const r1 = await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Roygbiv" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-01T10:00:00Z"),
+      source: "lastfm",
+    })
+    enrichedAlbumId = r1.albumId!
+
+    await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Aquarius" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-01T11:00:00Z"),
+      source: "lastfm",
+    })
+
+    await enrichAlbum(enrichedDb, {
+      albumId: enrichedAlbumId,
+      fetcher: {
+        getAlbumInfo: async () => ({
+          imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png",
+          tracks: [
+            { name: "Wildlife Analysis", trackNumber: 1, duration: 373 },
+            { name: "An Eagle in Your Mind", trackNumber: 2, duration: 393 },
+            { name: "Roygbiv", trackNumber: 3, duration: 172 },
+            { name: "Aquarius", trackNumber: 4, duration: 356 },
+          ],
+        }),
+      },
+    })
+  })
+
+  afterAll(async () => {
+    await enrichedClient.close()
+  })
+
+  it("returns tracks in track-number order", async () => {
+    const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+    expect(album).not.toBeNull()
+    expect(album!.enrichedAt).toBeInstanceOf(Date)
+    expect(album!.imageUrl).toBe("https://lastfm.freetls.fastly.net/i/u/300x300/abc.png")
+
+    const trackNumbers = album!.tracks.map((t) => t.trackNumber)
+    expect(trackNumbers).toEqual([1, 2, 3, 4])
+
+    const trackNames = album!.tracks.map((t) => t.trackName)
+    expect(trackNames).toEqual([
+      "Wildlife Analysis",
+      "An Eagle in Your Mind",
+      "Roygbiv",
+      "Aquarius",
+    ])
+  })
+
+  it("shows 0 plays for unscrobbled tracks and live counts for scrobbled ones", async () => {
+    const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+    const tracks = album!.tracks
+
+    const wildlife = tracks.find((t) => t.trackName === "Wildlife Analysis")!
+    expect(wildlife.playCount).toBe(0)
+    expect(wildlife.trackId).toBeNull()
+
+    const eagle = tracks.find((t) => t.trackName === "An Eagle in Your Mind")!
+    expect(eagle.playCount).toBe(0)
+    expect(eagle.trackId).toBeNull()
+
+    const roygbiv = tracks.find((t) => t.trackName === "Roygbiv")!
+    expect(roygbiv.playCount).toBe(1)
+    expect(roygbiv.trackId).not.toBeNull()
+
+    const aquarius = tracks.find((t) => t.trackName === "Aquarius")!
+    expect(aquarius.playCount).toBe(1)
+    expect(aquarius.trackId).not.toBeNull()
+  })
+
+  it("reflects new scrobbles without re-enrichment", async () => {
+    await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Roygbiv" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-02T10:00:00Z"),
+      source: "lastfm",
+    })
+
+    const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+    const roygbiv = album!.tracks.find((t) => t.trackName === "Roygbiv")!
+    expect(roygbiv.playCount).toBe(2)
+    expect(album!.playCount).toBe(3)
   })
 })

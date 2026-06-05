@@ -32,6 +32,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - **type**: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `style`, `perf`
 - **scope**: package or area affected (`web`, `ui`, `db`, `import`, `config`)
 - **description**: imperative mood, lowercase, no period
+- **No Co-Authored-By trailers** — do not add `Co-Authored-By: Claude` or any AI attribution to commit messages
 - Examples:
   - `feat(db): add scrobble schema and query functions`
   - `fix(ui): resolve sidebar hydration mismatch`

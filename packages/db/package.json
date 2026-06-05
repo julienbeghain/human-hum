@@ -34,6 +34,7 @@
     "./ingestion": "./src/ingestion.ts",
     "./queries": "./src/queries/index.ts",
     "./importers/lastfm": "./src/importers/lastfm.ts",
-    "./importers/source-fetcher": "./src/importers/source-fetcher.ts"
+    "./importers/source-fetcher": "./src/importers/source-fetcher.ts",
+    "./enrichment": "./src/enrichment.ts"
   }
 }

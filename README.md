@@ -1,21 +1,47 @@
-# human-hum
+# Human Hum
 
-A Next.js monorepo with shadcn/ui.
+Personal music scrobbling platform — records listening history from multiple sources and surfaces insights.
 
-## Adding components
+## Tech stack
 
-To add components to your app, run the following command at the root of your `web` app:
+- **Framework:** Next.js 16 (App Router)
+- **Database:** Neon Serverless Postgres + Drizzle ORM
+- **UI:** shadcn/ui + Tailwind CSS
+- **Monorepo:** pnpm workspaces + Turborepo
+
+## Structure
+
+```
+apps/
+├── web/        → Next.js frontend
+└── import/     → Bulk LastFM import script
+packages/
+├── db/         → Drizzle schema, client, migrations
+├── ui/         → Shared UI components (shadcn)
+├── eslint-config/
+└── typescript-config/
+```
+
+## Getting started
 
 ```bash
-pnpm dlx shadcn@latest add button -c apps/web
+pnpm install
+cp apps/web/.env.example apps/web/.env.local  # add your Neon connection string
+pnpm dev
 ```
 
-This will place the ui components in the `packages/ui/src/components` directory.
+## Commands
 
-## Using components
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Production build |
+| `pnpm lint` | Run ESLint |
+| `pnpm format` | Run Prettier |
+| `pnpm typecheck` | TypeScript type checking |
 
-To use the components in your app, import them from the `ui` package.
+## Architecture
 
-```tsx
-import { Button } from "@workspace/ui/components/button";
-```
+Star-schema design: dimension tables (`artists`, `albums`, `tracks`) describe the catalog, a central fact table (`scrobbles`) records listening events. Sources include LastFM, Spotify, and Tidal.
+
+See [CONTEXT.md](CONTEXT.md) for domain language and [docs/adr/](docs/adr/) for architectural decisions.

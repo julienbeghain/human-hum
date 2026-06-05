@@ -1,3 +1,6 @@
+import { z } from "zod"
+
+import { LastfmApiError, lastfmFetch, lastfmUrl } from "../lastfm-api"
 import type { ListenInput, Source } from "../ingestion"
 import type {
   FetchPageParams,
@@ -19,32 +22,29 @@ export type {
   SyncResult,
 } from "./source-fetcher"
 
-// --- LastFM API types ---
+// --- LastFM API schemas ---
 
-interface LastfmTrack {
-  name: string
-  mbid: string
-  artist: { "#text": string; mbid: string }
-  album: { "#text": string; mbid: string }
-  date?: { uts: string }
-  "@attr"?: { nowplaying: string }
-}
+const lastfmTrackSchema = z.object({
+  name: z.string(),
+  mbid: z.string().optional(),
+  artist: z.object({ "#text": z.string(), mbid: z.string().optional() }),
+  album: z.object({ "#text": z.string(), mbid: z.string().optional() }),
+  date: z.object({ uts: z.string() }).optional(),
+  "@attr": z.object({ nowplaying: z.string() }).optional(),
+})
 
-interface LastfmResponse {
-  recenttracks: {
-    track: LastfmTrack[]
-    "@attr": {
-      total: string
-      page: string
-      perPage: string
-      totalPages: string
-    }
-  }
-}
+const lastfmRecentTracksSchema = z.object({
+  recenttracks: z.object({
+    track: z.array(lastfmTrackSchema),
+    "@attr": z.object({ totalPages: z.string() }),
+  }),
+})
 
-interface LastfmUserInfo {
-  user: { playcount: string }
-}
+const lastfmUserInfoSchema = z.object({
+  user: z.object({ playcount: z.string() }),
+})
+
+type LastfmResponse = z.infer<typeof lastfmRecentTracksSchema>
 
 // --- LastfmFetcher ---
 
@@ -108,19 +108,12 @@ export class LastfmFetcher implements SourceFetcher {
   }
 
   async getRemotePlaycount(): Promise<number> {
-    const url = new URL("https://ws.audioscrobbler.com/2.0/")
-    url.searchParams.set("method", "user.getInfo")
-    url.searchParams.set("user", this.user)
-    url.searchParams.set("api_key", this.apiKey)
-    url.searchParams.set("format", "json")
+    const url = lastfmUrl(this.apiKey, {
+      method: "user.getInfo",
+      user: this.user,
+    })
 
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(
-        `LastFM user.getInfo error: ${response.status} ${response.statusText}`
-      )
-    }
-    const data = (await response.json()) as LastfmUserInfo
+    const data = await lastfmFetch(url, lastfmUserInfoSchema)
     return parseInt(data.user.playcount, 10)
   }
 }
@@ -135,47 +128,30 @@ function buildUrl(params: {
   limit: number
   page: number
 }): URL {
-  const url = new URL("https://ws.audioscrobbler.com/2.0/")
-  url.searchParams.set("method", "user.getRecentTracks")
-  url.searchParams.set("user", params.user)
-  url.searchParams.set("api_key", params.apiKey)
-  url.searchParams.set("format", "json")
-  url.searchParams.set("limit", params.limit.toString())
-  url.searchParams.set("page", params.page.toString())
+  const query: Record<string, string> = {
+    method: "user.getRecentTracks",
+    user: params.user,
+    limit: params.limit.toString(),
+    page: params.page.toString(),
+  }
+  if (params.from) query.from = unixSeconds(params.from)
+  if (params.to) query.to = unixSeconds(params.to)
 
-  if (params.from) url.searchParams.set("from", unixSeconds(params.from))
-  if (params.to) url.searchParams.set("to", unixSeconds(params.to))
-
-  return url
+  return lastfmUrl(params.apiKey, query)
 }
 
 async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    let response: Response
     try {
-      response = await fetch(url)
+      return await lastfmFetch(url, lastfmRecentTracksSchema)
     } catch (err) {
-      if (attempt < MAX_RETRIES) {
-        const backoff = BASE_DELAY_MS * Math.pow(2, attempt)
-        await delay(backoff)
-        continue
-      }
-      throw err
-    }
+      // Fatal client errors (non-429 HTTP statuses) never succeed on retry.
+      // Network errors and 429 rate-limits do, so back off and try again.
+      const fatal = err instanceof LastfmApiError && err.status !== 429
+      if (fatal || attempt >= MAX_RETRIES) throw err
 
-    if (response.ok) {
-      return (await response.json()) as LastfmResponse
+      await delay(BASE_DELAY_MS * Math.pow(2, attempt))
     }
-
-    if (response.status === 429 && attempt < MAX_RETRIES) {
-      const backoff = BASE_DELAY_MS * Math.pow(2, attempt)
-      await delay(backoff)
-      continue
-    }
-
-    throw new Error(
-      `LastFM API error: ${response.status} ${response.statusText}`
-    )
   }
 
   throw new Error("LastFM API: max retries exceeded")

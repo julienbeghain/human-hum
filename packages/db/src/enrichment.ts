@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm"
+import { z } from "zod"
 
 import type { Database } from "./index"
+import { lastfmFetch, lastfmUrl } from "./lastfm-api"
 import * as schema from "./schema"
 
 export function normalizeTrackName(name: string): string {
@@ -24,23 +26,25 @@ export interface AlbumInfoFetcher {
   }): Promise<AlbumInfoResult>
 }
 
-interface LastfmImage {
-  "#text": string
-  size: string
-}
+const lastfmAlbumTrackSchema = z.object({
+  name: z.string(),
+  duration: z.string().optional(),
+  "@attr": z.object({ rank: z.string() }),
+})
 
-interface LastfmAlbumTrack {
-  name: string
-  duration: string
-  "@attr": { rank: string }
-}
-
-interface LastfmAlbumInfoResponse {
-  album: {
-    image: LastfmImage[]
-    tracks?: { track: LastfmAlbumTrack | LastfmAlbumTrack[] }
-  }
-}
+const lastfmAlbumInfoSchema = z.object({
+  album: z.object({
+    image: z.array(z.object({ "#text": z.string() })),
+    tracks: z
+      .object({
+        track: z.union([
+          lastfmAlbumTrackSchema,
+          z.array(lastfmAlbumTrackSchema),
+        ]),
+      })
+      .optional(),
+  }),
+})
 
 class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
   constructor(private readonly apiKey: string) {}
@@ -49,28 +53,20 @@ class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
     albumName: string
     artistName: string
   }): Promise<AlbumInfoResult> {
-    const url = new URL("https://ws.audioscrobbler.com/2.0/")
-    url.searchParams.set("method", "album.getInfo")
-    url.searchParams.set("artist", params.artistName)
-    url.searchParams.set("album", params.albumName)
-    url.searchParams.set("api_key", this.apiKey)
-    url.searchParams.set("format", "json")
+    const url = lastfmUrl(this.apiKey, {
+      method: "album.getInfo",
+      artist: params.artistName,
+      album: params.albumName,
+    })
 
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(
-        `LastFM API error: ${response.status} ${response.statusText}`
-      )
-    }
-
-    const data = (await response.json()) as LastfmAlbumInfoResponse
+    const data = await lastfmFetch(url, lastfmAlbumInfoSchema)
     const images = data.album.image
     const largestImage = images[images.length - 1]
     const imageUrl =
       largestImage && largestImage["#text"] ? largestImage["#text"] : null
 
     const rawTracks = data.album.tracks?.track
-    let trackList: LastfmAlbumTrack[]
+    let trackList: z.infer<typeof lastfmAlbumTrackSchema>[]
     if (!rawTracks) {
       trackList = []
     } else if (Array.isArray(rawTracks)) {

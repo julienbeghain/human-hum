@@ -6,14 +6,8 @@ import { notFound } from "next/navigation"
 import { db } from "@workspace/db"
 import { enrichAlbum } from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@workspace/ui/components/table"
+
+import { ScrobbleCountTable } from "@/components/scrobble-count-table"
 
 export default async function AlbumDetailPage(props: {
   params: Promise<{ id: string }>
@@ -68,33 +62,16 @@ export default async function AlbumDetailPage(props: {
         </div>
       </div>
 
-      {album.tracks.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-medium">Tracks</h2>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Track</TableHead>
-                <TableHead className="text-right">Scrobbles</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {album.tracks.map((track, index) => (
-                <TableRow key={track.trackId ?? `unmatched-${index}`}>
-                  <TableCell className="text-muted-foreground">
-                    {track.trackNumber ?? index + 1}
-                  </TableCell>
-                  <TableCell>{track.trackName}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {track.playCount.toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      )}
+      <ScrobbleCountTable
+        title="Tracks"
+        itemHeader="Track"
+        rows={album.tracks.map((track, index) => ({
+          key: track.trackId ?? `unmatched-${index}`,
+          rank: track.trackNumber ?? index + 1,
+          label: track.trackName,
+          scrobbleCount: track.playCount,
+        }))}
+      />
     </div>
   )
 }

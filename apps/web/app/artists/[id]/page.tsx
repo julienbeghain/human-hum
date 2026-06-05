@@ -3,14 +3,8 @@ import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
 import { getArtistDetail } from "@workspace/db/queries"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@workspace/ui/components/table"
+
+import { ScrobbleCountTable } from "@/components/scrobble-count-table"
 
 export default async function ArtistDetailPage(props: {
   params: Promise<{ id: string }>
@@ -33,68 +27,31 @@ export default async function ArtistDetailPage(props: {
         </p>
       </div>
 
-      {artist.topTracks.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-medium">Top tracks</h2>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Track</TableHead>
-                <TableHead className="text-right">Scrobbles</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {artist.topTracks.map((track, index) => (
-                <TableRow key={track.trackId}>
-                  <TableCell className="text-muted-foreground">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>{track.trackName}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {track.playCount.toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      )}
+      <ScrobbleCountTable
+        title="Top tracks"
+        itemHeader="Track"
+        rows={artist.topTracks.map((track, index) => ({
+          key: track.trackId,
+          rank: index + 1,
+          label: track.trackName,
+          scrobbleCount: track.playCount,
+        }))}
+      />
 
-      {artist.topAlbums.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-medium">Top albums</h2>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Album</TableHead>
-                <TableHead className="text-right">Scrobbles</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {artist.topAlbums.map((album, index) => (
-                <TableRow key={album.albumId}>
-                  <TableCell className="text-muted-foreground">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/albums/${album.albumId}`}
-                      className="hover:underline"
-                    >
-                      {album.albumName}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {album.playCount.toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      )}
+      <ScrobbleCountTable
+        title="Top albums"
+        itemHeader="Album"
+        rows={artist.topAlbums.map((album, index) => ({
+          key: album.albumId,
+          rank: index + 1,
+          label: (
+            <Link href={`/albums/${album.albumId}`} className="hover:underline">
+              {album.albumName}
+            </Link>
+          ),
+          scrobbleCount: album.playCount,
+        }))}
+      />
     </div>
   )
 }

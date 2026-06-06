@@ -11,7 +11,8 @@
     "start": "pnpm with-env next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.40.0",
@@ -34,6 +35,7 @@
     "@workspace/typescript-config": "workspace:*",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }

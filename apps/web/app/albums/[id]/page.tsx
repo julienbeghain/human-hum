@@ -7,7 +7,7 @@ import { db } from "@workspace/db"
 import { enrichAlbum } from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
 
-import { ScrobbleCountTable } from "@/components/scrobble-count-table"
+import { TrackTable } from "@/components/track-table"
 
 export default async function AlbumDetailPage(props: {
   params: Promise<{ id: string }>
@@ -62,14 +62,13 @@ export default async function AlbumDetailPage(props: {
         </div>
       </div>
 
-      <ScrobbleCountTable
-        title="Tracks"
-        itemHeader="Track"
+      <TrackTable
         rows={album.tracks.map((track, index) => ({
           key: track.trackId ?? `unmatched-${index}`,
-          rank: track.trackNumber ?? index + 1,
-          label: track.trackName,
+          trackNumber: track.trackNumber,
+          trackName: track.trackName,
           scrobbleCount: track.playCount,
+          duration: track.duration,
         }))}
       />
     </div>

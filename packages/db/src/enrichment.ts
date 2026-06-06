@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm"
 import { z } from "zod"
 
+import { env } from "./env"
 import type { Database } from "./index"
 import { lastfmFetch, lastfmUrl } from "./lastfm-api"
 import * as schema from "./schema"
@@ -86,11 +87,7 @@ class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
 }
 
 function createDefaultFetcher(): AlbumInfoFetcher {
-  const apiKey = process.env.LASTFM_API_KEY
-  if (!apiKey) {
-    throw new Error("LASTFM_API_KEY environment variable is not set")
-  }
-  return new LastfmAlbumInfoFetcher(apiKey)
+  return new LastfmAlbumInfoFetcher(env.LASTFM_API_KEY)
 }
 
 export async function enrichAlbum(

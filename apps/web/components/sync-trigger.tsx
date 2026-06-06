@@ -23,14 +23,15 @@ export function SyncTrigger() {
     if (hasRun.current) return
     hasRun.current = true
 
-    void checkAndSync().then((result) => {
-      setSyncing(false)
-      if (!result.ok) return
-      setNowPlaying(result.nowPlaying)
-      if (result.imported > 0) {
-        startTransition(() => router.refresh())
-      }
-    })
+    void checkAndSync()
+      .then((result) => {
+        setSyncing(false)
+        setNowPlaying(result.nowPlaying)
+        if (result.imported > 0) {
+          startTransition(() => router.refresh())
+        }
+      })
+      .catch(() => setSyncing(false))
   }, [router])
 
   return (

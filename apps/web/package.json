@@ -15,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@t3-oss/env-nextjs": "^0.13.11",
     "@tabler/icons-react": "^3.40.0",
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",

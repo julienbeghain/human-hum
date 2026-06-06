@@ -1,18 +1,13 @@
 import { createDb } from "@workspace/db"
 import { importScrobbles, LastfmFetcher } from "@workspace/db/importers/lastfm"
 
-function requireEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing ${name}`)
-  return value
-}
+import { env } from "./env"
 
 const backfill = process.argv.includes("--backfill")
-const apiKey = requireEnv("LASTFM_API_KEY")
-const user = requireEnv("LASTFM_USER")
-const db = createDb(requireEnv("DATABASE_URL"))
+const user = env.LASTFM_USER
+const db = createDb(env.DATABASE_URL)
 
-const fetcher = new LastfmFetcher(apiKey, user)
+const fetcher = new LastfmFetcher(env.LASTFM_API_KEY, user)
 const mode = backfill ? "full backfill" : "incremental sync"
 console.log(`Importing scrobbles for ${user} (${mode})...`)
 

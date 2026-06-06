@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@workspace/db": "workspace:*"
+    "@t3-oss/env-core": "^0.13.11",
+    "@workspace/db": "workspace:*",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",

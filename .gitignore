@@ -46,3 +46,6 @@ npm-debug.log*
 
 # Agent context (handoffs, plans — local only)
 agent-context/
+
+# Graphify (knowledge-graph tooling output — regenerable, not synced)
+graphify-out/

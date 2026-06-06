@@ -1,0 +1,10 @@
+# Drizzle migration snapshots explode into hundreds of granular JSON nodes
+**/drizzle/meta/
+**/migrations/meta/
+# Lockfiles add noise, no semantic value
+pnpm-lock.yaml
+*.lock
+# Build / tooling output
+.next/
+dist/
+graphify-out/

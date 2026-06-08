@@ -70,6 +70,12 @@ export type ArtistRanking = {
   playCount: number
 }
 
+export type TrackRanking = {
+  trackId: number
+  trackName: string
+  playCount: number
+}
+
 // --- Artist detail ---
 
 export type GetArtistDetailParams = ScrobbleFilter & {
@@ -80,7 +86,7 @@ export type ArtistDetail = {
   artistId: number
   artistName: string
   playCount: number
-  topTracks: { trackId: number; trackName: string; playCount: number }[]
+  topTracks: TrackRanking[]
   topAlbums: { albumId: number; albumName: string; playCount: number }[]
 }
 

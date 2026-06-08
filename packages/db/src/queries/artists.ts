@@ -3,6 +3,7 @@ import { and, count, desc, eq } from "drizzle-orm"
 import type { Database } from "../index"
 import * as schema from "../schema"
 import { buildFilterConditions } from "./filter"
+import { topTracksByScrobbles } from "./tracks"
 import type {
   ArtistDetail,
   ArtistRanking,
@@ -57,18 +58,7 @@ export async function getArtistDetail(
   if (!artist) return null
 
   // Top tracks for this artist
-  const topTracks = await db
-    .select({
-      trackId: schema.tracks.id,
-      trackName: schema.tracks.name,
-      playCount: count(schema.scrobbles.id),
-    })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
-    .where(and(...conditions))
-    .groupBy(schema.tracks.id, schema.tracks.name)
-    .orderBy(desc(count(schema.scrobbles.id)))
-    .limit(10)
+  const topTracks = await topTracksByScrobbles(db, conditions, 10)
 
   // Top albums for this artist (join albums directly)
   const albumConditions = buildFilterConditions(filter)

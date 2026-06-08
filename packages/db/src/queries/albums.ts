@@ -1,8 +1,9 @@
-import { and, asc, count, desc, eq } from "drizzle-orm"
+import { and, asc, count, eq } from "drizzle-orm"
 
 import type { Database } from "../index"
 import * as schema from "../schema"
 import { buildFilterConditions } from "./filter"
+import { topTracksByScrobbles } from "./tracks"
 import type { AlbumDetail, AlbumDetailTrack, GetAlbumDetailParams } from "./types"
 
 export async function getAlbumDetail(
@@ -51,17 +52,7 @@ async function getScrobbleDerivedTracks(
   db: Database,
   conditions: ReturnType<typeof buildFilterConditions>
 ): Promise<AlbumDetailTrack[]> {
-  const rows = await db
-    .select({
-      trackId: schema.tracks.id,
-      trackName: schema.tracks.name,
-      playCount: count(schema.scrobbles.id),
-    })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
-    .where(and(...conditions))
-    .groupBy(schema.tracks.id, schema.tracks.name)
-    .orderBy(desc(count(schema.scrobbles.id)))
+  const rows = await topTracksByScrobbles(db, conditions)
 
   return rows.map((r) => ({
     ...r,

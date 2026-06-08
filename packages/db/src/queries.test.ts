@@ -322,6 +322,51 @@ describe("getArtistDetail", () => {
   })
 })
 
+// --- getArtistDetail (top-tracks cap) ---
+
+describe("getArtistDetail (top-tracks cap)", () => {
+  let capDb: Database
+  let capClient: PGlite
+  let prolificArtistId: number
+
+  beforeAll(async () => {
+    ;({ db: capDb, client: capClient } = await setupTestDb())
+
+    // One artist with 12 distinct tracks, descending play counts (track 1 = 12
+    // plays … track 12 = 1 play) so the cap and ordering are both observable.
+    for (let track = 1; track <= 12; track++) {
+      for (let play = 0; play <= 12 - track; play++) {
+        const r = await recordListen(capDb, {
+          artist: { name: "Prolific Artist" },
+          track: { name: `Track ${track}` },
+          listenedAt: new Date(Date.UTC(2026, 0, track, 0, play)),
+          source: "lastfm",
+        })
+        prolificArtistId = r.artistId
+      }
+    }
+  })
+
+  afterAll(async () => {
+    await capClient.close()
+  })
+
+  it("caps top tracks at 10 and orders by play count descending", async () => {
+    const detail = await getArtistDetail(capDb, { artistId: prolificArtistId })
+    expect(detail).not.toBeNull()
+    expect(detail!.topTracks.length).toBe(10)
+    for (let i = 1; i < detail!.topTracks.length; i++) {
+      expect(detail!.topTracks[i - 1]!.playCount).toBeGreaterThanOrEqual(
+        detail!.topTracks[i]!.playCount
+      )
+    }
+    // Most-played track surfaces first; the two least-played are dropped.
+    expect(detail!.topTracks[0]!.trackName).toBe("Track 1")
+    const names = detail!.topTracks.map((t) => t.trackName)
+    expect(names).not.toContain("Track 12")
+  })
+})
+
 // --- getAlbumDetail ---
 
 describe("getAlbumDetail", () => {

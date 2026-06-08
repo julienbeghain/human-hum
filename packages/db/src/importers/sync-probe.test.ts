@@ -1,6 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
-
-vi.setConfig({ hookTimeout: 30_000 })
+import { describe, expect, it } from "vitest"
 
 import type { ListenInput, Source } from "../ingestion"
 import { setupTestDb } from "../test-utils"

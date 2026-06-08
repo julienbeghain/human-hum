@@ -5,6 +5,11 @@ import { defineConfig } from "vitest/config"
 // import time. Provide dummy values so that boundary is satisfied.
 export default defineConfig({
   test: {
+    // Every test spins up pglite and runs all migrations; some do it inline in
+    // the test body (not a hook), so the default 5s testTimeout is hit under
+    // parallel CPU contention. Give pglite-backed bodies the same 30s headroom
+    // the hook-based suites already use via vi.setConfig({ hookTimeout }).
+    testTimeout: 30_000,
     env: {
       DATABASE_URL: "postgres://test:test@localhost/test",
       LASTFM_API_KEY: "test-key",

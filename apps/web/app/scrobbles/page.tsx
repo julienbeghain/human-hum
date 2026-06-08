@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 
+import { scrobblesPageParamSchema } from "@/lib/validators/scrobbles-page-param"
+
 const DEFAULT_PAGE_SIZE = 50
 
 function formatTimestamp(date: Date): string {
@@ -30,11 +32,6 @@ function formatTimestamp(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date)
-}
-
-function parsePageParam(value: string | string[] | undefined): number {
-  const n = Number(value)
-  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1
 }
 
 function buildPageHref(page: number): string {
@@ -81,7 +78,7 @@ export default async function ScrobblesPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const searchParams = await props.searchParams
-  const page = parsePageParam(searchParams.page)
+  const page = scrobblesPageParamSchema.parse(searchParams.page)
   const { rows, totalCount } = await getScrobbles(db, {
     page,
     pageSize: DEFAULT_PAGE_SIZE,

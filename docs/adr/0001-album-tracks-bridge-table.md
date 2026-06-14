@@ -4,6 +4,8 @@
 
 Accepted — 2026-05-13
 
+> **Forward note (2026-06-14):** Per [ADR-0003](0003-rename-scrobble-to-hum.md), the recorded play event was renamed from "scrobble" to **hum** and the `scrobbles` fact table to `listen.hums`. Read every "scrobble" / "scrobble count" / "scrobbles table" below as "hum" / "hum count" / "`listen.hums`". This record is left otherwise unchanged.
+
 ## Context
 
 The album detail page needs to display tracks in their original album order (by track number) with scrobble counts. The current schema has no concept of track number — tracks are linked to albums only through scrobbles, and displayed ranked by play count.

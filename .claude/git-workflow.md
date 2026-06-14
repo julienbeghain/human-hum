@@ -36,7 +36,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - **description**: imperative mood, lowercase, no period
 - **No Co-Authored-By trailers** — do not add `Co-Authored-By: Claude` or any AI attribution to commit messages
 - Examples:
-  - `feat(db): add scrobble schema and query functions`
+  - `feat(db): add hum schema and query functions`
   - `fix(ui): resolve sidebar hydration mismatch`
   - `chore(config): add eslint rule for import order`
 

@@ -4,6 +4,8 @@
 
 Accepted — 2026-05-16
 
+> **Forward note (2026-06-14):** Per [ADR-0003](0003-rename-scrobble-to-hum.md), the recorded play event was renamed from "scrobble" to **hum** and the `scrobbles` fact table to `listen.hums`. This auth spec is not yet built: when it is, the `user_id` column lands on `listen.hums` (not "scrobbles"), the dedup key becomes `(user_id, track_id, listened_at)` on that table, and "user-scoped scrobbles" should be read as "user-scoped hums". This record is left otherwise unchanged.
+
 ## Context
 
 The system is currently single-user with no `user_id` on any table. The question arose: if two users scrobble the same track, does the data duplicate or share? This forced a decision about how multi-user should work.

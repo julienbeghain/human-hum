@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**human-hum** is a personal music scrobbling platform that records listening history and surfaces insights. It's built as a **pnpm monorepo** using:
+**human-hum** is a personal listening-history platform that records what you listen to and surfaces insights. It's built as a **pnpm monorepo** using:
 
 | Technology | Role |
 |---|---|
@@ -25,7 +25,7 @@ The codebase is organized into 6 layers following the monorepo package structure
 ```
 ┌─────────────────────────────────────────────────┐
 │  Web Application (apps/web)                     │  ← Next.js pages & layouts
-│  Data Import Pipeline (apps/import)             │  ← LastFM scrobble ingestion
+│  Data Import Pipeline (apps/import)             │  ← LastFM hum ingestion
 ├─────────────────────────────────────────────────┤
 │  UI Component Library (packages/ui/components)  │  ← 55 shadcn/ui components
 │  UI Infrastructure (packages/ui/lib + hooks)    │  ← cn() utility, useIsMobile
@@ -42,11 +42,11 @@ Next.js pages, layouts, and app-level components. The root layout configures fon
 
 ### 2. Data Import Pipeline (`apps/import/`) — 1 file
 
-A standalone script that fetches scrobbles from the LastFM API and upserts them into the star-schema database through a chain of artist → album → track → scrobble upserts.
+A standalone script that fetches hums from the LastFM API and upserts them into the star-schema database through a chain of artist → album → track → hum upserts.
 
 ### 3. Database Layer (`packages/db/`) — 4 files
 
-Drizzle ORM schema definitions using a **star-schema pattern**: three dimension tables (artists, albums, tracks) and one fact table (scrobbles) in the `listen` Postgres schema. Shared timestamp mixins keep table definitions DRY.
+Drizzle ORM schema definitions using a **star-schema pattern**: three dimension tables (artists, albums, tracks) and one fact table (hums) in the `listen` Postgres schema. Shared timestamp mixins keep table definitions DRY.
 
 ### 4. UI Component Library (`packages/ui/src/components/`) — 55 files
 
@@ -67,7 +67,7 @@ Shared ESLint configs (`base.js` → `next.js` / `react-internal.js`) and per-pa
 
 - **Monorepo imports**: UI components are always imported as `@workspace/ui/components/<name>`, DB as `@workspace/db`
 - **Component pattern**: Every UI component = base-ui primitive + cva variants + cn() class merging
-- **Star-schema**: Database uses dimensional modeling — dimension tables (artists, albums, tracks) + fact table (scrobbles)
+- **Star-schema**: Database uses dimensional modeling — dimension tables (artists, albums, tracks) + fact table (hums)
 - **Upsert chain**: Data import uses `onConflictDoNothing` + re-query pattern for race-safe inserts
 - **Theme hotkey**: Press `d` to toggle dark/light mode (ThemeHotkey component)
 
@@ -123,14 +123,14 @@ These files require extra care when modifying — they have the most logic, stat
 
 | File | Purpose |
 |---|---|
-| `src/lastfm.ts` | Fetches LastFM scrobbles, upserts artists/albums/tracks/scrobbles |
+| `src/lastfm.ts` | Fetches LastFM hums, upserts artists/albums/tracks/hums |
 
 ### `packages/db/` — Database
 
 | File | Purpose |
 |---|---|
 | `src/index.ts` | Creates Drizzle client connected to Neon via HTTP, exports `db` + `schema` |
-| `src/schema.ts` | Star-schema tables: artists, albums, tracks, scrobbles in `listen` schema |
+| `src/schema.ts` | Star-schema tables: artists, albums, tracks, hums in `listen` schema |
 | `src/shared.ts` | `listen` schema namespace + timestamp column mixins |
 | `drizzle.config.ts` | Drizzle Kit migration config (dialect, schema paths, output dir) |
 

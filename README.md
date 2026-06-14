@@ -1,6 +1,6 @@
 # Human Hum
 
-Personal music scrobbling platform — records listening history from multiple sources and surfaces insights.
+Personal listening-history platform — records what you listen to from multiple sources and surfaces insights.
 
 ## Tech stack
 
@@ -42,6 +42,6 @@ pnpm dev
 
 ## Architecture
 
-Star-schema design: dimension tables (`artists`, `albums`, `tracks`) describe the catalog, a central fact table (`scrobbles`) records listening events. Sources include LastFM, Spotify, and Tidal.
+Star-schema design: dimension tables (`artists`, `albums`, `tracks`) describe the catalog, a central fact table (`hums`) records listening events. Sources include LastFM, Spotify, and Tidal.
 
 See [CONTEXT.md](CONTEXT.md) for domain language and [docs/adr/](docs/adr/) for architectural decisions.

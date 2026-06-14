@@ -145,9 +145,10 @@ async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
     try {
       return await lastfmFetch(url, lastfmRecentTracksSchema)
     } catch (err) {
-      // Fatal client errors (non-429 HTTP statuses) never succeed on retry.
-      // Network errors and 429 rate-limits do, so back off and try again.
-      const fatal = err instanceof LastfmApiError && err.status !== 429
+      // 4xx client errors (except 429) never succeed on retry. Network errors,
+      // 429 rate-limits, and 5xx server errors are transient — back off and retry.
+      const fatal =
+        err instanceof LastfmApiError && err.status !== 429 && err.status < 500
       if (fatal || attempt >= MAX_RETRIES) throw err
 
       await delay(BASE_DELAY_MS * Math.pow(2, attempt))

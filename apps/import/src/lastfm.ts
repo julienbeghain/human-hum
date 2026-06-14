@@ -1,5 +1,5 @@
 import { createDb } from "@workspace/db"
-import { importScrobbles, LastfmFetcher } from "@workspace/db/importers/lastfm"
+import { importHums, LastfmFetcher } from "@workspace/db/importers/lastfm"
 
 import { env } from "./env"
 
@@ -9,9 +9,9 @@ const db = createDb(env.DATABASE_URL)
 
 const fetcher = new LastfmFetcher(env.LASTFM_API_KEY, user)
 const mode = backfill ? "full backfill" : "incremental sync"
-console.log(`Importing scrobbles for ${user} (${mode})...`)
+console.log(`Importing hums for ${user} (${mode})...`)
 
-importScrobbles(db, fetcher, {
+importHums(db, fetcher, {
   backfill: backfill || undefined,
   onProgress: ({ page, totalPages, imported, skipped }) => {
     console.log(
@@ -25,7 +25,7 @@ importScrobbles(db, fetcher, {
     )
     if (completeness) {
       console.log(
-        `Completeness: ${completeness.localCount}/${completeness.remotePlaycount} scrobbles (${completeness.coveragePercent}%)`
+        `Completeness: ${completeness.localCount}/${completeness.remoteTotal} hums (${completeness.coveragePercent}%)`
       )
     }
   })

@@ -25,8 +25,11 @@ export default async function AlbumDetailPage(props: {
     try {
       await enrichAlbum(db, { albumId })
       album = (await getAlbumDetail(db, { albumId }))!
-    } catch {
-      // Enrichment failed — render with scrobble-derived fallback
+    } catch (error) {
+      // Enrichment failed — render with scrobble-derived fallback. Surface the
+      // failure so a broken album is diagnosable (human-hum-51); a structured
+      // logger is deferred to human-hum-gz2.
+      console.error(`Album enrichment failed for albumId=${albumId}:`, error)
     }
   }
 

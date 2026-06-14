@@ -27,10 +27,14 @@ export interface AlbumInfoFetcher {
   }): Promise<AlbumInfoResult>
 }
 
+// Unlike user.getRecentTracks (which serializes numbers as strings), the
+// album.getInfo endpoint returns `duration` and `@attr.rank` as JSON numbers.
+// z.coerce.number() tolerates both shapes so the boundary can't regress on
+// either endpoint's serialization quirk.
 const lastfmAlbumTrackSchema = z.object({
   name: z.string(),
-  duration: z.string().optional(),
-  "@attr": z.object({ rank: z.string() }),
+  duration: z.coerce.number().optional(),
+  "@attr": z.object({ rank: z.coerce.number() }),
 })
 
 const lastfmAlbumInfoSchema = z.object({
@@ -47,7 +51,7 @@ const lastfmAlbumInfoSchema = z.object({
   }),
 })
 
-class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
+export class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
   constructor(private readonly apiKey: string) {}
 
   async getAlbumInfo(params: {
@@ -78,8 +82,8 @@ class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
 
     const tracks = trackList.map((t) => ({
       name: t.name,
-      trackNumber: parseInt(t["@attr"].rank, 10),
-      duration: t.duration ? parseInt(t.duration, 10) || null : null,
+      trackNumber: t["@attr"].rank,
+      duration: t.duration || null,
     }))
 
     return { imageUrl, tracks }

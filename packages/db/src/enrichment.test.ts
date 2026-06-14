@@ -6,7 +6,7 @@ vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "./index"
 import type { AlbumInfoFetcher, AlbumInfoResult } from "./enrichment"
-import { enrichAlbum } from "./enrichment"
+import { enrichAlbum, LastfmAlbumInfoFetcher } from "./enrichment"
 import { recordListen } from "./ingestion"
 import { albums, albumTracks } from "./schema"
 import { setupTestDb } from "./test-utils"
@@ -211,6 +211,50 @@ describe("enrichAlbum", () => {
     expect(trackRows).toHaveLength(2)
 
     await freshClient.close()
+  })
+
+  it("parses album.getInfo with numeric duration and rank from the real schema", async () => {
+    // Regression for human-hum-52: the album.getInfo endpoint returns duration
+    // and @attr.rank as JSON numbers, not strings. This drives the real Zod
+    // schema via a mocked fetch — the fakeFetcher in other tests bypasses it,
+    // which is why the global enrichment failure went undetected.
+    const payload = {
+      album: {
+        image: [
+          { "#text": "https://lastfm.example/34s/a.png" },
+          { "#text": "https://lastfm.example/300x300/a.png" },
+        ],
+        tracks: {
+          track: [
+            { name: "Wildlife Analysis", duration: 373, "@attr": { rank: 1 } },
+            { name: "Roygbiv", duration: 172, "@attr": { rank: 2 } },
+          ],
+        },
+      },
+    }
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    )
+
+    try {
+      const fetcher = new LastfmAlbumInfoFetcher("test-key")
+      const result = await fetcher.getAlbumInfo({
+        albumName: "Music Has the Right to Children",
+        artistName: "Boards of Canada",
+      })
+
+      expect(result.imageUrl).toBe("https://lastfm.example/300x300/a.png")
+      expect(result.tracks).toEqual([
+        { name: "Wildlife Analysis", trackNumber: 1, duration: 373 },
+        { name: "Roygbiv", trackNumber: 2, duration: 172 },
+      ])
+    } finally {
+      fetchSpy.mockRestore()
+    }
   })
 
   it("handles album with no tracks in response", async () => {

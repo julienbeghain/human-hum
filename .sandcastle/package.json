@@ -4,10 +4,10 @@
   "type": "module",
   "description": "Optional parallel agent executor — isolated from the pnpm workspace; install on demand.",
   "scripts": {
-    "start": "tsx main.mts"
+    "start": "cd .. && tsx .sandcastle/main.mts"
   },
   "dependencies": {
-    "@ai-hero/sandcastle": "0.8.0"
+    "@ai-hero/sandcastle": "0.5.10"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

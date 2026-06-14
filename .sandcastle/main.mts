@@ -1,10 +1,15 @@
+// MUST run with the repo root as the working directory: sandcastle resolves the
+// host repo (and the .git bind-mounts the sandbox needs) from cwd. Running from
+// .sandcastle/ leaves the container unable to resolve the repo. `npm start` cd's
+// to the root for you; promptFile paths below are root-relative for the same reason.
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
 const MAX_ITERATIONS = 10;
 
-// Explicit image name: the default derives "sandcastle:.sandcastle" from the
-// dotfile dir, which Docker rejects as an invalid tag. Build it with:
+// Explicit image name so we don't depend on sandcastle's default derivation
+// (it varies by version — repo name on 0.5.x, dotfile-dir name on 0.8.x → an
+// invalid tag). Build it with:
 //   npx sandcastle docker build-image --image-name sandcastle:human-hum
 const IMAGE = "sandcastle:human-hum";
 
@@ -15,7 +20,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker({ imageName: IMAGE }),
     name: "Planner",
     agent: sandcastle.claudeCode("claude-opus-4-8"),
-    promptFile: "./plan-prompt.md",
+    promptFile: "./.sandcastle/plan-prompt.md",
     idleTimeoutSeconds: 300,
   });
 
@@ -57,7 +62,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       const result = await sandbox.run({
         name: `Implementer ${issue.number}`,
         agent: sandcastle.claudeCode("claude-opus-4-8"),
-        promptFile: "./implement-prompt.md",
+        promptFile: "./.sandcastle/implement-prompt.md",
         idleTimeoutSeconds: 600,
         promptArgs: {
           TASK_ID: issue.number,
@@ -72,7 +77,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         const review = await sandbox.run({
           name: `Reviewer ${issue.number}`,
           agent: sandcastle.claudeCode("claude-sonnet-4-6"),
-          promptFile: "./review-prompt.md",
+          promptFile: "./.sandcastle/review-prompt.md",
           idleTimeoutSeconds: 300,
           promptArgs: {
             TASK_ID: issue.number,
@@ -119,7 +124,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     maxIterations: 10,
     idleTimeoutSeconds: 600,
     agent: sandcastle.claudeCode("claude-opus-4-8"),
-    promptFile: "./merge-prompt.md",
+    promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
       ISSUES: completedIssues

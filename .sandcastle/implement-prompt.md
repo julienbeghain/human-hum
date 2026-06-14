@@ -33,9 +33,12 @@ pnpm typecheck && pnpm lint
 
 # Commits
 
-Prefix commit messages with `SANDCASTLE:`. Use conventional commit format:
+Conventional commit format, imperative and lowercase. Reference the issue with a `Refs` footer so
+`git log` ↔ issue stays linked. **No tool-name prefix, no `Co-Authored-By` / AI attribution.**
 ```
-SANDCASTLE: feat(db): add artist lookup by mbid
+feat(db): add artist lookup by mbid
+
+Refs #{{TASK_ID}}
 ```
 
 # Done

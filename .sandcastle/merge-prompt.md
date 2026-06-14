@@ -12,13 +12,20 @@ For each branch:
 3. Run `pnpm typecheck && pnpm lint` to verify
 4. If checks fail, fix the issues and commit
 
-# Close issues
+# Record the result, then close
 
-After successful merge, close the corresponding GitHub issues:
+For each merged issue:
 
 {{ISSUES}}
 
-Use `gh issue close <number> --comment "Implemented and merged by Sandcastle"` for each.
+The issue body is the result-of-record — **do not leave a closing comment.** Instead, append a dated
+`Result` section to the issue **body** and tick its acceptance criteria, then close it:
+
+1. `gh issue view <number> --json body --jq .body` → current body
+2. Append a section (what shipped in result terms; key decisions + why; merge commit SHA), tick the
+   `- [ ]` criteria to `- [x]`, and write the new body via a temp file:
+   `gh issue edit <number> --body-file /tmp/issue-<number>.md`
+3. `gh issue close <number>`
 
 # Done
 

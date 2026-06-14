@@ -9,8 +9,9 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const plan = await sandcastle.run({
     sandbox: docker(),
     name: "Planner",
-    agent: sandcastle.claudeCode("claude-opus-4-6"),
+    agent: sandcastle.claudeCode("claude-opus-4-8"),
     promptFile: "./.sandcastle/plan-prompt.md",
+    idleTimeoutSeconds: 300,
   });
 
   const planMatch = plan.stdout.match(/<plan>([\s\S]*?)<\/plan>/);
@@ -50,8 +51,9 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 
       const result = await sandbox.run({
         name: `Implementer ${issue.number}`,
-        agent: sandcastle.claudeCode("claude-opus-4-6"),
+        agent: sandcastle.claudeCode("claude-opus-4-8"),
         promptFile: "./.sandcastle/implement-prompt.md",
+        idleTimeoutSeconds: 600,
         promptArgs: {
           TASK_ID: issue.number,
           ISSUE_TITLE: issue.title,
@@ -59,20 +61,26 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         },
       });
 
+      // Fail-closed: nothing merges without commits AND a PASS verdict from review.
+      let verdict: "PASS" | "FAIL" = "FAIL";
       if (result.commits.length > 0) {
-        await sandbox.run({
+        const review = await sandbox.run({
           name: `Reviewer ${issue.number}`,
           agent: sandcastle.claudeCode("claude-sonnet-4-6"),
           promptFile: "./.sandcastle/review-prompt.md",
+          idleTimeoutSeconds: 300,
           promptArgs: {
             TASK_ID: issue.number,
             ISSUE_TITLE: issue.title,
             BRANCH: issue.branch,
           },
         });
+        verdict = /<verdict>\s*PASS\s*<\/verdict>/i.test(review.stdout)
+          ? "PASS"
+          : "FAIL";
       }
 
-      return { issue, result };
+      return { issue, result, verdict };
     }),
   );
 
@@ -81,8 +89,15 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 
   for (const entry of settled) {
     if (entry.status === "fulfilled") {
-      completedBranches.push(entry.value.issue.branch);
-      completedIssues.push(entry.value.issue);
+      const { issue, result, verdict } = entry.value;
+      if (result.commits.length > 0 && verdict === "PASS") {
+        completedBranches.push(issue.branch);
+        completedIssues.push(issue);
+      } else {
+        console.warn(
+          `Gate held ${issue.branch}: commits=${result.commits.length}, verdict=${verdict}`,
+        );
+      }
     } else {
       console.error("Agent failed:", entry.reason);
     }
@@ -97,7 +112,8 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker(),
     name: "Merger",
     maxIterations: 10,
-    agent: sandcastle.claudeCode("claude-opus-4-6"),
+    idleTimeoutSeconds: 600,
+    agent: sandcastle.claudeCode("claude-opus-4-8"),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),

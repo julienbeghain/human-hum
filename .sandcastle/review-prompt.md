@@ -14,15 +14,27 @@ Follow the coding standards in @.sandcastle/CODING_STANDARDS.md
 4. **Tests** — Adequate coverage? Tests actually assert meaningful behavior?
 5. **Style** — Follows project conventions in `CLAUDE.md`?
 
-# Output
+# Fixing
 
-If improvements are needed, make the changes and commit with:
+Fix anything you can bring to standard safely, and commit each fix with a conventional message that
+references the issue — no tool-name prefix, no AI attribution:
 ```
-SANDCASTLE: review(scope): description of refinement
+fix(scope): correct off-by-one in album upsert
+
+Refs #{{TASK_ID}}
 ```
 
-If no changes needed, say so.
+# Verdict — the gate
 
-Once review is complete, output:
+This verdict decides whether the branch is allowed to merge. Be strict; when in doubt, FAIL.
 
-<promise>COMPLETE</promise>
+- `PASS` — the branch meets the checklist (after any fixes you committed) and is safe to merge.
+- `FAIL` — a real defect remains that you could not safely fix. The branch will be held back.
+
+End your output with exactly one verdict tag:
+
+<verdict>PASS</verdict>
+
+or
+
+<verdict>FAIL</verdict>

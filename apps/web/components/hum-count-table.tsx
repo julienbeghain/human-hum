@@ -9,28 +9,28 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 
-interface ScrobbleCountRow {
+interface HumCountRow {
   key: string | number
   rank: number
   label: ReactNode
-  scrobbleCount: number
+  humCount: number
 }
 
-interface ScrobbleCountTableProps {
+interface HumCountTableProps {
   title: string
   itemHeader: string
-  rows: ScrobbleCountRow[]
+  rows: HumCountRow[]
 }
 
 /**
- * A ranked table of entities (tracks, albums) with their scrobble counts.
+ * A ranked table of entities (tracks, albums) with their hum counts.
  * Renders nothing when there are no rows.
  */
-export function ScrobbleCountTable({
+export function HumCountTable({
   title,
   itemHeader,
   rows,
-}: ScrobbleCountTableProps) {
+}: HumCountTableProps) {
   if (rows.length === 0) return null
 
   return (
@@ -41,7 +41,7 @@ export function ScrobbleCountTable({
           <TableRow>
             <TableHead className="w-12">#</TableHead>
             <TableHead>{itemHeader}</TableHead>
-            <TableHead className="text-right">Scrobbles</TableHead>
+            <TableHead className="text-right">Hums</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -50,7 +50,7 @@ export function ScrobbleCountTable({
               <TableCell className="text-muted-foreground">{row.rank}</TableCell>
               <TableCell>{row.label}</TableCell>
               <TableCell className="text-right text-muted-foreground">
-                {row.scrobbleCount.toLocaleString()}
+                {row.humCount.toLocaleString()}
               </TableCell>
             </TableRow>
           ))}

@@ -47,7 +47,7 @@ function SyncingBanner() {
     <div className="bg-muted flex items-center gap-3 border-b px-4 py-2 text-sm">
       <Spinner className="size-4 shrink-0" />
       <span className="text-muted-foreground">
-        Syncing your latest scrobbles&hellip;
+        Syncing your latest hums&hellip;
       </span>
     </div>
   )

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { db } from "@workspace/db"
 import { getArtistDetail } from "@workspace/db/queries"
 
-import { ScrobbleCountTable } from "@/components/scrobble-count-table"
+import { HumCountTable } from "@/components/hum-count-table"
 
 export default async function ArtistDetailPage(props: {
   params: Promise<{ id: string }>
@@ -23,22 +23,22 @@ export default async function ArtistDetailPage(props: {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">{artist.artistName}</h1>
         <p className="text-muted-foreground">
-          {artist.playCount.toLocaleString()} scrobbles
+          {artist.humCount.toLocaleString()} hums
         </p>
       </div>
 
-      <ScrobbleCountTable
+      <HumCountTable
         title="Top tracks"
         itemHeader="Track"
         rows={artist.topTracks.map((track, index) => ({
           key: track.trackId,
           rank: index + 1,
           label: track.trackName,
-          scrobbleCount: track.playCount,
+          humCount: track.humCount,
         }))}
       />
 
-      <ScrobbleCountTable
+      <HumCountTable
         title="Top albums"
         itemHeader="Album"
         rows={artist.topAlbums.map((album, index) => ({
@@ -49,7 +49,7 @@ export default async function ArtistDetailPage(props: {
               {album.albumName}
             </Link>
           ),
-          scrobbleCount: album.playCount,
+          humCount: album.humCount,
         }))}
       />
     </div>

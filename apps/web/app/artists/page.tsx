@@ -26,7 +26,7 @@ export default async function ArtistsPage() {
             <TableRow>
               <TableHead className="w-12">#</TableHead>
               <TableHead>Artist</TableHead>
-              <TableHead className="text-right">Scrobbles</TableHead>
+              <TableHead className="text-right">Hums</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -44,7 +44,7 @@ export default async function ArtistsPage() {
                   </Link>
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  {artist.playCount.toLocaleString()}
+                  {artist.humCount.toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}

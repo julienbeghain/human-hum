@@ -6,7 +6,7 @@ const row = (over: Partial<TrackRow>): TrackRow => ({
   key: over.trackName ?? "x",
   trackNumber: null,
   trackName: "x",
-  scrobbleCount: 0,
+  humCount: 0,
   duration: null,
   ...over,
 })
@@ -14,9 +14,9 @@ const row = (over: Partial<TrackRow>): TrackRow => ({
 describe("sortTracks", () => {
   it("album-order sorts by track number ascending", () => {
     const rows = [
-      row({ trackName: "C", trackNumber: 3, scrobbleCount: 1 }),
-      row({ trackName: "A", trackNumber: 1, scrobbleCount: 50 }),
-      row({ trackName: "B", trackNumber: 2, scrobbleCount: 10 }),
+      row({ trackName: "C", trackNumber: 3, humCount: 1 }),
+      row({ trackName: "A", trackNumber: 1, humCount: 50 }),
+      row({ trackName: "B", trackNumber: 2, humCount: 10 }),
     ]
     expect(sortTracks(rows, "album-order").map((r) => r.trackName)).toEqual([
       "A",
@@ -25,21 +25,21 @@ describe("sortTracks", () => {
     ])
   })
 
-  it("scrobble-count-descending sorts by scrobble count descending", () => {
+  it("hum-count-descending sorts by hum count descending", () => {
     const rows = [
-      row({ trackName: "A", trackNumber: 1, scrobbleCount: 50 }),
-      row({ trackName: "B", trackNumber: 2, scrobbleCount: 10 }),
-      row({ trackName: "C", trackNumber: 3, scrobbleCount: 99 }),
+      row({ trackName: "A", trackNumber: 1, humCount: 50 }),
+      row({ trackName: "B", trackNumber: 2, humCount: 10 }),
+      row({ trackName: "C", trackNumber: 3, humCount: 99 }),
     ]
     expect(
-      sortTracks(rows, "scrobble-count-descending").map((r) => r.trackName)
+      sortTracks(rows, "hum-count-descending").map((r) => r.trackName)
     ).toEqual(["C", "A", "B"])
   })
 
   it("album-order keeps null track numbers in their original order (un-enriched album)", () => {
     const rows = [
-      row({ trackName: "first", trackNumber: null, scrobbleCount: 5 }),
-      row({ trackName: "second", trackNumber: null, scrobbleCount: 9 }),
+      row({ trackName: "first", trackNumber: null, humCount: 5 }),
+      row({ trackName: "second", trackNumber: null, humCount: 9 }),
     ]
     expect(sortTracks(rows, "album-order").map((r) => r.trackName)).toEqual([
       "first",

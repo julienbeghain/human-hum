@@ -33,7 +33,7 @@ import {
 } from "@workspace/ui/components/dropdown-menu"
 
 const navItems = [
-  { title: "Scrobbles", href: "/scrobbles", icon: IconMusic },
+  { title: "Hums", href: "/hums", icon: IconMusic },
   { title: "Artists", href: "/artists", icon: IconMicrophone2 },
   { title: "Albums", href: "/albums", icon: IconVinyl },
   { title: "Stats", href: "/stats", icon: IconChartBar },

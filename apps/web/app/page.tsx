@@ -7,9 +7,9 @@ export default function Page() {
       <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
         <div>
           <h1 className="font-medium">Welcome to Human Hum</h1>
-          <p>Your personal music scrobbling platform.</p>
-          <Button className="mt-2" nativeButton={false} render={<Link href="/scrobbles" />}>
-            View Scrobbles
+          <p>Your personal listening-history platform.</p>
+          <Button className="mt-2" nativeButton={false} render={<Link href="/hums" />}>
+            View Hums
           </Button>
         </div>
         <div className="font-mono text-xs text-muted-foreground">

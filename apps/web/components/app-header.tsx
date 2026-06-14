@@ -13,7 +13,7 @@ import {
 } from "@workspace/ui/components/breadcrumb"
 
 const pageTitles: Record<string, string> = {
-  "/scrobbles": "Scrobbles",
+  "/hums": "Hums",
   "/artists": "Artists",
   "/albums": "Albums",
   "/stats": "Stats",

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
-import { getScrobbleById } from "@workspace/db/queries"
+import { getHumById } from "@workspace/db/queries"
 
 function formatTimestamp(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -11,7 +11,7 @@ function formatTimestamp(date: Date): string {
   }).format(date)
 }
 
-export default async function ScrobbleDetailPage(props: {
+export default async function HumDetailPage(props: {
   params: Promise<{ id: string }>
 }) {
   const { id: rawId } = await props.params
@@ -19,29 +19,29 @@ export default async function ScrobbleDetailPage(props: {
 
   if (!Number.isFinite(id) || id < 1) notFound()
 
-  const scrobble = await getScrobbleById(db, id)
+  const hum = await getHumById(db, id)
 
-  if (!scrobble) notFound()
+  if (!hum) notFound()
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{scrobble.trackName}</h1>
+        <h1 className="text-2xl font-semibold">{hum.trackName}</h1>
         <p className="text-lg text-muted-foreground">
           <Link
-            href={`/artists/${scrobble.artistId}`}
+            href={`/artists/${hum.artistId}`}
             className="hover:underline"
           >
-            {scrobble.artistName}
+            {hum.artistName}
           </Link>
         </p>
-        {scrobble.albumId && scrobble.albumName && (
+        {hum.albumId && hum.albumName && (
           <p className="text-muted-foreground">
             <Link
-              href={`/albums/${scrobble.albumId}`}
+              href={`/albums/${hum.albumId}`}
               className="hover:underline"
             >
-              {scrobble.albumName}
+              {hum.albumName}
             </Link>
           </p>
         )}
@@ -51,23 +51,23 @@ export default async function ScrobbleDetailPage(props: {
         <div className="flex flex-col gap-1">
           <dt className="text-sm text-muted-foreground">Played</dt>
           <dd className="text-sm font-medium">
-            {formatTimestamp(scrobble.listenedAt)}
+            {formatTimestamp(hum.listenedAt)}
           </dd>
         </div>
         <div className="flex flex-col gap-1">
           <dt className="text-sm text-muted-foreground">Source</dt>
-          <dd className="text-sm font-medium capitalize">{scrobble.source}</dd>
+          <dd className="text-sm font-medium capitalize">{hum.source}</dd>
         </div>
         <div className="flex flex-col gap-1">
           <dt className="text-sm text-muted-foreground">Track plays</dt>
           <dd className="text-sm font-medium">
-            {scrobble.trackPlayCount.toLocaleString()}
+            {hum.trackHumCount.toLocaleString()}
           </dd>
         </div>
         <div className="flex flex-col gap-1">
           <dt className="text-sm text-muted-foreground">Artist plays</dt>
           <dd className="text-sm font-medium">
-            {scrobble.artistPlayCount.toLocaleString()}
+            {hum.artistHumCount.toLocaleString()}
           </dd>
         </div>
       </dl>

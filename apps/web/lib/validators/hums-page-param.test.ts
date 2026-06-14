@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { scrobblesPageParamSchema } from "./scrobbles-page-param"
+import { humsPageParamSchema } from "./hums-page-param"
 
-describe("scrobblesPageParamSchema", () => {
+describe("humsPageParamSchema", () => {
   it("coerces a valid numeric string to an integer", () => {
-    expect(scrobblesPageParamSchema.parse("1")).toBe(1)
-    expect(scrobblesPageParamSchema.parse("5")).toBe(5)
+    expect(humsPageParamSchema.parse("1")).toBe(1)
+    expect(humsPageParamSchema.parse("5")).toBe(5)
   })
 
   it.each([
@@ -16,6 +16,6 @@ describe("scrobblesPageParamSchema", () => {
     ["a fractional value", "1.5"],
     ["an overflow value", "1e999"],
   ])("falls back to page 1 for %s", (_label, input) => {
-    expect(scrobblesPageParamSchema.parse(input)).toBe(1)
+    expect(humsPageParamSchema.parse(input)).toBe(1)
   })
 })

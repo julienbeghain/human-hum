@@ -26,7 +26,7 @@ export default async function AlbumDetailPage(props: {
       await enrichAlbum(db, { albumId })
       album = (await getAlbumDetail(db, { albumId }))!
     } catch (error) {
-      // Enrichment failed — render with scrobble-derived fallback. Surface the
+      // Enrichment failed — render with hum-derived fallback. Surface the
       // failure so a broken album is diagnosable (human-hum-51); a structured
       // logger is deferred to human-hum-gz2.
       console.error(`Album enrichment failed for albumId=${albumId}:`, error)
@@ -60,7 +60,7 @@ export default async function AlbumDetailPage(props: {
             </Link>
           </p>
           <p className="text-muted-foreground">
-            {album.playCount.toLocaleString()} scrobbles
+            {album.humCount.toLocaleString()} hums
           </p>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default async function AlbumDetailPage(props: {
           key: track.trackId ?? `unmatched-${index}`,
           trackNumber: track.trackNumber,
           trackName: track.trackName,
-          scrobbleCount: track.playCount,
+          humCount: track.humCount,
           duration: track.duration,
         }))}
       />

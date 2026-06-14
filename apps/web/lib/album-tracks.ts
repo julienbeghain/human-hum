@@ -1,17 +1,17 @@
-export type SortMode = "album-order" | "scrobble-count-descending"
+export type SortMode = "album-order" | "hum-count-descending"
 
 export interface TrackRow {
   key: string | number
   trackNumber: number | null
   trackName: string
-  scrobbleCount: number
+  humCount: number
   duration: number | null
 }
 
 export function sortTracks(rows: TrackRow[], mode: SortMode): TrackRow[] {
   const sorted = [...rows]
-  if (mode === "scrobble-count-descending") {
-    sorted.sort((a, b) => b.scrobbleCount - a.scrobbleCount)
+  if (mode === "hum-count-descending") {
+    sorted.sort((a, b) => b.humCount - a.humCount)
   } else {
     // album-order: track number ascending; null track numbers sink to the end
     // while preserving their original relative order (un-enriched albums).

@@ -35,7 +35,7 @@ export function TrackTable({ rows }: TrackTableProps) {
 
   function handleSortChange(value: string[]) {
     const next = value[0]
-    if (next === "album-order" || next === "scrobble-count-descending") {
+    if (next === "album-order" || next === "hum-count-descending") {
       setSortMode(next)
     }
   }
@@ -51,8 +51,8 @@ export function TrackTable({ rows }: TrackTableProps) {
           size="sm"
         >
           <ToggleGroupItem value="album-order">Album order</ToggleGroupItem>
-          <ToggleGroupItem value="scrobble-count-descending">
-            Scrobbles
+          <ToggleGroupItem value="hum-count-descending">
+            Hums
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -62,7 +62,7 @@ export function TrackTable({ rows }: TrackTableProps) {
             <TableHead className="w-12">#</TableHead>
             <TableHead>Track</TableHead>
             <TableHead className="text-right">Duration</TableHead>
-            <TableHead className="text-right">Scrobbles</TableHead>
+            <TableHead className="text-right">Hums</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -76,7 +76,7 @@ export function TrackTable({ rows }: TrackTableProps) {
                 {formatDuration(row.duration)}
               </TableCell>
               <TableCell className="text-right text-muted-foreground">
-                {row.scrobbleCount.toLocaleString()}
+                {row.humCount.toLocaleString()}
               </TableCell>
             </TableRow>
           ))}

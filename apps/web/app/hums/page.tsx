@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import { db } from "@workspace/db"
-import { getScrobbles } from "@workspace/db/queries"
+import { getHums } from "@workspace/db/queries"
 import {
   Pagination,
   PaginationContent,
@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 
-import { scrobblesPageParamSchema } from "@/lib/validators/scrobbles-page-param"
+import { humsPageParamSchema } from "@/lib/validators/hums-page-param"
 
 const DEFAULT_PAGE_SIZE = 50
 
@@ -35,8 +35,8 @@ function formatTimestamp(date: Date): string {
 }
 
 function buildPageHref(page: number): string {
-  if (page <= 1) return "/scrobbles"
-  return `/scrobbles?page=${page}`
+  if (page <= 1) return "/hums"
+  return `/hums?page=${page}`
 }
 
 /**
@@ -74,12 +74,12 @@ function getPageNumbers(
   return result
 }
 
-export default async function ScrobblesPage(props: {
+export default async function HumsPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const searchParams = await props.searchParams
-  const page = scrobblesPageParamSchema.parse(searchParams.page)
-  const { rows, totalCount } = await getScrobbles(db, {
+  const page = humsPageParamSchema.parse(searchParams.page)
+  const { rows, totalCount } = await getHums(db, {
     page,
     pageSize: DEFAULT_PAGE_SIZE,
   })
@@ -91,7 +91,7 @@ export default async function ScrobblesPage(props: {
     <div className="flex flex-col gap-4 p-6">
       {rows.length === 0 && clampedPage === 1 ? (
         <p className="text-muted-foreground">
-          No scrobbles yet. Import some listening history first.
+          No hums yet. Import some listening history first.
         </p>
       ) : (
         <>
@@ -109,7 +109,7 @@ export default async function ScrobblesPage(props: {
                 <TableRow key={row.id}>
                   <TableCell>
                     <Link
-                      href={`/scrobbles/${row.id}`}
+                      href={`/hums/${row.id}`}
                       className="hover:underline"
                     >
                       {row.trackName}
@@ -146,7 +146,7 @@ export default async function ScrobblesPage(props: {
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {totalCount.toLocaleString()} scrobbles
+                {totalCount.toLocaleString()} hums
               </p>
               <Pagination>
                 <PaginationContent>

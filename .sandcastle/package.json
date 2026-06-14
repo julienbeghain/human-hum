@@ -1,0 +1,16 @@
+{
+  "name": "human-hum-sandcastle",
+  "private": true,
+  "type": "module",
+  "description": "Optional parallel agent executor — isolated from the pnpm workspace; install on demand.",
+  "scripts": {
+    "start": "tsx main.mts"
+  },
+  "dependencies": {
+    "@ai-hero/sandcastle": "0.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0"
+  }
+}

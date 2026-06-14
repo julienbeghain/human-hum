@@ -53,6 +53,13 @@ log the journey to bd notes, run `pnpm typecheck && pnpm lint`, then close (belo
 
 ### With sandcastle (optional)
 
+Sandcastle is **isolated from the pnpm workspace** — install it on demand, it never ships in a
+normal `pnpm install`:
+
+```bash
+cd .sandcastle && npm install && npm start   # runs main.mts via tsx
+```
+
 [.sandcastle/main.mts](../../.sandcastle/main.mts) batches up to 4 `ready-for-agent` issues in
 parallel, each in an isolated Docker worktree, through four roles:
 

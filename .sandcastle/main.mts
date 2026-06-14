@@ -3,14 +3,19 @@ import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
 const MAX_ITERATIONS = 10;
 
+// Explicit image name: the default derives "sandcastle:.sandcastle" from the
+// dotfile dir, which Docker rejects as an invalid tag. Build it with:
+//   npx sandcastle docker build-image --image-name sandcastle:human-hum
+const IMAGE = "sandcastle:human-hum";
+
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
 
   const plan = await sandcastle.run({
-    sandbox: docker(),
+    sandbox: docker({ imageName: IMAGE }),
     name: "Planner",
     agent: sandcastle.claudeCode("claude-opus-4-8"),
-    promptFile: "./.sandcastle/plan-prompt.md",
+    promptFile: "./plan-prompt.md",
     idleTimeoutSeconds: 300,
   });
 
@@ -39,7 +44,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const settled = await Promise.allSettled(
     issues.map(async (issue) => {
       await using sandbox = await sandcastle.createSandbox({
-        sandbox: docker(),
+        sandbox: docker({ imageName: IMAGE }),
         branch: issue.branch,
         copyToWorktree: ["node_modules"],
         hooks: {
@@ -52,7 +57,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       const result = await sandbox.run({
         name: `Implementer ${issue.number}`,
         agent: sandcastle.claudeCode("claude-opus-4-8"),
-        promptFile: "./.sandcastle/implement-prompt.md",
+        promptFile: "./implement-prompt.md",
         idleTimeoutSeconds: 600,
         promptArgs: {
           TASK_ID: issue.number,
@@ -67,7 +72,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         const review = await sandbox.run({
           name: `Reviewer ${issue.number}`,
           agent: sandcastle.claudeCode("claude-sonnet-4-6"),
-          promptFile: "./.sandcastle/review-prompt.md",
+          promptFile: "./review-prompt.md",
           idleTimeoutSeconds: 300,
           promptArgs: {
             TASK_ID: issue.number,
@@ -109,12 +114,12 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   }
 
   await sandcastle.run({
-    sandbox: docker(),
+    sandbox: docker({ imageName: IMAGE }),
     name: "Merger",
     maxIterations: 10,
     idleTimeoutSeconds: 600,
     agent: sandcastle.claudeCode("claude-opus-4-8"),
-    promptFile: "./.sandcastle/merge-prompt.md",
+    promptFile: "./merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
       ISSUES: completedIssues

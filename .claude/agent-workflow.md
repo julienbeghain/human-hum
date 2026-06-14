@@ -1,12 +1,11 @@
 # Agent Workflow
 
-Work management uses three layers.
+Work management uses two layers.
 
 ## Layers
 
 1. **GitHub Issues** — epics and sub-issues. Agents create, comment, and close these via `/feature-workflow` and `/gh-edit-body`. The human owns the backlog and PRD-level decisions.
 2. **Beads (`bd`)** — the agent work queue. Each GitHub issue is decomposed into small tasks with dependencies. Agents operate here for day-to-day task tracking.
-3. **Ralph** — a bash loop that spawns fresh Claude Code instances. Each instance picks one Beads task, implements it, commits, and exits. Fresh context window every iteration.
 
 ```
 GitHub Issue #43 ("Album enrichment")

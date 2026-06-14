@@ -32,7 +32,7 @@ The codebase is organized into 6 layers following the monorepo package structure
 ├─────────────────────────────────────────────────┤
 │  Database Layer (packages/db)                   │  ← Drizzle schema, client, config
 ├─────────────────────────────────────────────────┤
-│  Configuration & Tooling                        │  ← ESLint configs, ralph.sh
+│  Configuration & Tooling                        │  ← ESLint configs
 └─────────────────────────────────────────────────┘
 ```
 
@@ -57,9 +57,9 @@ Drizzle ORM schema definitions using a **star-schema pattern**: three dimension 
 - **`utils.ts`** — exports `cn()`, the most-imported module in the project (merges Tailwind classes via clsx + tailwind-merge)
 - **`use-mobile.ts`** — React hook detecting mobile viewport at 768px breakpoint
 
-### 6. Configuration & Tooling — 8 files
+### 6. Configuration & Tooling — 7 files
 
-Shared ESLint configs (`base.js` → `next.js` / `react-internal.js`), per-package eslint entry points, and `ralph.sh` (Claude CLI automation harness).
+Shared ESLint configs (`base.js` → `next.js` / `react-internal.js`) and per-package eslint entry points.
 
 ---
 
@@ -86,7 +86,7 @@ Shared ESLint configs (`base.js` → `next.js` / `react-internal.js`), per-packa
 | 7 | **Database Schema** | `packages/db/src/schema.ts`, `packages/db/src/shared.ts` — Star-schema tables |
 | 8 | **Database Client** | `packages/db/src/index.ts`, `packages/db/drizzle.config.ts` — Drizzle + Neon setup |
 | 9 | **LastFM Import** | `apps/import/src/lastfm.ts` — Data ingestion pipeline |
-| 10 | **Tooling** | `packages/eslint-config/base.js`, `ralph.sh` — Shared lint + automation |
+| 10 | **Tooling** | `packages/eslint-config/base.js` — Shared lint config |
 
 ---
 

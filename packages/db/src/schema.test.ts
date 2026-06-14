@@ -99,7 +99,7 @@ describe("album_tracks table", () => {
     })
   })
 
-  it("allows null track_id for unscrobbled tracks", async () => {
+  it("allows null track_id for tracks without hums", async () => {
     await db.insert(albumTracks).values({
       albumId,
       trackNumber: 2,

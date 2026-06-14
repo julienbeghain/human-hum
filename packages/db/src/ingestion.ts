@@ -15,8 +15,8 @@ export interface ListenInput {
   source: Source
 }
 
-export interface ScrobbleResult {
-  scrobbleId: number
+export interface HumResult {
+  humId: number
   trackId: number
   artistId: number
   albumId: number | null
@@ -79,8 +79,8 @@ async function resolveEntity(
 export async function recordListen(
   db: Database,
   input: ListenInput
-): Promise<ScrobbleResult> {
-  const { artists, albums, tracks, scrobbles } = schema
+): Promise<HumResult> {
+  const { artists, albums, tracks, hums } = schema
 
   // Resolve artist (unique on name only — mbid stored but not part of identity)
   const artistMbid = normalizeMbid(input.artist.mbid)
@@ -115,9 +115,9 @@ export async function recordListen(
     { name: input.track.name, mbid: trackMbid, artistId }
   )
 
-  // Insert scrobble
+  // Insert hum
   const inserted = await db
-    .insert(scrobbles)
+    .insert(hums)
     .values({
       trackId,
       albumId,
@@ -125,30 +125,30 @@ export async function recordListen(
       source: input.source,
     })
     .onConflictDoNothing()
-    .returning({ id: scrobbles.id })
+    .returning({ id: hums.id })
 
   const wasNew = inserted.length > 0
-  let scrobbleId: number
+  let humId: number
   if (wasNew) {
-    scrobbleId = inserted[0]!.id
+    humId = inserted[0]!.id
   } else {
     const existing = await db
-      .select({ id: scrobbles.id })
-      .from(scrobbles)
+      .select({ id: hums.id })
+      .from(hums)
       .where(
         and(
-          eq(scrobbles.trackId, trackId),
-          eq(scrobbles.listenedAt, input.listenedAt)
+          eq(hums.trackId, trackId),
+          eq(hums.listenedAt, input.listenedAt)
         )
       )
       .limit(1)
     if (!existing[0]) {
       throw new Error(
-        "Scrobble resolution failed: duplicate detected but not found"
+        "Hum resolution failed: duplicate detected but not found"
       )
     }
-    scrobbleId = existing[0].id
+    humId = existing[0].id
   }
 
-  return { scrobbleId, trackId, artistId, albumId, wasNew }
+  return { humId, trackId, artistId, albumId, wasNew }
 }

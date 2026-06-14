@@ -1,9 +1,105 @@
 {
-  "id": "73cd27c6-4f85-4b24-845e-0c2f75a5cca9",
+  "id": "5e7ea94e-3345-4c57-9d63-0b3558eebe5e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "listen.album_tracks": {
+      "name": "album_tracks",
+      "schema": "listen",
+      "columns": {
+        "album_id": {
+          "name": "album_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "track_number": {
+          "name": "track_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "album_tracks_track_id_idx": {
+          "name": "album_tracks_track_id_idx",
+          "columns": [
+            {
+              "expression": "track_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "album_tracks_album_id_albums_id_fk": {
+          "name": "album_tracks_album_id_albums_id_fk",
+          "tableFrom": "album_tracks",
+          "tableTo": "albums",
+          "schemaTo": "listen",
+          "columnsFrom": [
+            "album_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "album_tracks_track_id_tracks_id_fk": {
+          "name": "album_tracks_track_id_tracks_id_fk",
+          "tableFrom": "album_tracks",
+          "tableTo": "tracks",
+          "schemaTo": "listen",
+          "columnsFrom": [
+            "track_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "album_tracks_album_id_track_number_pk": {
+          "name": "album_tracks_album_id_track_number_pk",
+          "columns": [
+            "album_id",
+            "track_number"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "listen.albums": {
       "name": "albums",
       "schema": "listen",
@@ -43,6 +139,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enriched_at": {
+          "name": "enriched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -58,8 +166,8 @@
         }
       },
       "indexes": {
-        "albums_name_artist_id_mbid_idx": {
-          "name": "albums_name_artist_id_mbid_idx",
+        "albums_name_artist_id_idx": {
+          "name": "albums_name_artist_id_idx",
           "columns": [
             {
               "expression": "name",
@@ -69,12 +177,6 @@
             },
             {
               "expression": "artist_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "mbid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -171,17 +273,11 @@
         }
       },
       "indexes": {
-        "artists_name_mbid_idx": {
-          "name": "artists_name_mbid_idx",
+        "artists_name_idx": {
+          "name": "artists_name_idx",
           "columns": [
             {
               "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "mbid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -200,8 +296,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "listen.scrobbles": {
-      "name": "scrobbles",
+    "listen.hums": {
+      "name": "hums",
       "schema": "listen",
       "columns": {
         "id": {
@@ -211,7 +307,7 @@
           "notNull": true,
           "identity": {
             "type": "always",
-            "name": "scrobbles_id_seq",
+            "name": "hums_id_seq",
             "schema": "listen",
             "increment": "1",
             "startWith": "1",
@@ -226,6 +322,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "album_id": {
+          "name": "album_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "listened_at": {
           "name": "listened_at",
@@ -255,8 +357,8 @@
         }
       },
       "indexes": {
-        "scrobbles_track_id_listened_at_idx": {
-          "name": "scrobbles_track_id_listened_at_idx",
+        "hums_track_id_listened_at_idx": {
+          "name": "hums_track_id_listened_at_idx",
           "columns": [
             {
               "expression": "track_id",
@@ -276,8 +378,8 @@
           "method": "btree",
           "with": {}
         },
-        "scrobbles_listened_at_idx": {
-          "name": "scrobbles_listened_at_idx",
+        "hums_listened_at_idx": {
+          "name": "hums_listened_at_idx",
           "columns": [
             {
               "expression": "listened_at",
@@ -291,8 +393,23 @@
           "method": "btree",
           "with": {}
         },
-        "scrobbles_source_idx": {
-          "name": "scrobbles_source_idx",
+        "hums_album_id_idx": {
+          "name": "hums_album_id_idx",
+          "columns": [
+            {
+              "expression": "album_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hums_source_idx": {
+          "name": "hums_source_idx",
           "columns": [
             {
               "expression": "source",
@@ -308,13 +425,27 @@
         }
       },
       "foreignKeys": {
-        "scrobbles_track_id_tracks_id_fk": {
-          "name": "scrobbles_track_id_tracks_id_fk",
-          "tableFrom": "scrobbles",
+        "hums_track_id_tracks_id_fk": {
+          "name": "hums_track_id_tracks_id_fk",
+          "tableFrom": "hums",
           "tableTo": "tracks",
           "schemaTo": "listen",
           "columnsFrom": [
             "track_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "hums_album_id_albums_id_fk": {
+          "name": "hums_album_id_albums_id_fk",
+          "tableFrom": "hums",
+          "tableTo": "albums",
+          "schemaTo": "listen",
+          "columnsFrom": [
+            "album_id"
           ],
           "columnsTo": [
             "id"
@@ -368,12 +499,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "album_id": {
-          "name": "album_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -389,8 +514,8 @@
         }
       },
       "indexes": {
-        "tracks_name_artist_id_mbid_idx": {
-          "name": "tracks_name_artist_id_mbid_idx",
+        "tracks_name_artist_id_idx": {
+          "name": "tracks_name_artist_id_idx",
           "columns": [
             {
               "expression": "name",
@@ -400,12 +525,6 @@
             },
             {
               "expression": "artist_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "mbid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -430,21 +549,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "tracks_album_id_idx": {
-          "name": "tracks_album_id_idx",
-          "columns": [
-            {
-              "expression": "album_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -455,20 +559,6 @@
           "schemaTo": "listen",
           "columnsFrom": [
             "artist_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "tracks_album_id_albums_id_fk": {
-          "name": "tracks_album_id_albums_id_fk",
-          "tableFrom": "tracks",
-          "tableTo": "albums",
-          "schemaTo": "listen",
-          "columnsFrom": [
-            "album_id"
           ],
           "columnsTo": [
             "id"

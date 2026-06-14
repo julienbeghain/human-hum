@@ -1,6 +1,6 @@
 export { getAlbumDetail } from "./albums"
 export { getArtistDetail, getArtistRankings } from "./artists"
-export { getScrobbleById, getScrobbles } from "./scrobbles"
+export { getHumById, getHums } from "./hums"
 export { getStats } from "./stats"
 export { getListeningClock, getTimeSeries } from "./time-series"
 export type {
@@ -11,14 +11,14 @@ export type {
   GetAlbumDetailParams,
   GetArtistDetailParams,
   GetArtistRankingsParams,
-  GetScrobblesParams,
+  GetHumsParams,
   GetTimeSeriesParams,
   ListeningClockSlot,
-  PaginatedScrobbles,
-  ScrobbleDetail,
-  ScrobbleFilter,
-  ScrobbleRow,
-  ScrobbleStats,
+  PaginatedHums,
+  HumDetail,
+  HumFilter,
+  HumRow,
+  HumStats,
   Source,
   TimeSeriesBucket,
   TimeSeriesPeriod,

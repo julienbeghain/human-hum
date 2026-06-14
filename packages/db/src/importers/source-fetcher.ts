@@ -1,6 +1,6 @@
 import type { Database } from "../index"
 import { recordListen, type ListenInput, type Source } from "../ingestion"
-import { getScrobbles, getStats } from "../queries"
+import { getHums, getStats } from "../queries"
 
 // --- SourceFetcher interface ---
 
@@ -29,14 +29,14 @@ export interface FetchPageParams {
 }
 
 /**
- * Source-agnostic interface for fetching scrobble pages from external services.
+ * Source-agnostic interface for fetching hum pages from external services.
  * Implement this for each music source (LastFM, Spotify, Tidal, etc.).
  */
 export interface SourceFetcher {
   readonly source: Source
   fetchPage(params: FetchPageParams): Promise<FetchPageResult>
   /** Return total play count from the remote source (for completeness checks). */
-  getRemotePlaycount?(): Promise<number>
+  getRemoteTotal?(): Promise<number>
 }
 
 // --- Orchestration types ---
@@ -65,7 +65,7 @@ export interface ImportResult {
 
 export interface CompletenessResult {
   localCount: number
-  remotePlaycount: number
+  remoteTotal: number
   coveragePercent: number
 }
 
@@ -81,7 +81,7 @@ export interface SyncProbeResult {
 // --- Sync probe ---
 
 /**
- * Lightweight check: are there new scrobbles to import?
+ * Lightweight check: are there new hums to import?
  *
  * Queries the latest local timestamp, then fetches one track from the source
  * with `from = latest - 1s`. The response's `totalPages` (at pageSize=1)
@@ -91,7 +91,7 @@ export async function syncProbe(
   db: Database,
   fetcher: SourceFetcher
 ): Promise<SyncProbeResult> {
-  const { rows } = await getScrobbles(db, { pageSize: 1 })
+  const { rows } = await getHums(db, { pageSize: 1 })
   const latest = rows[0]
 
   const from = latest
@@ -125,12 +125,12 @@ export interface SyncResult {
 }
 
 /**
- * Probe-then-import: checks for new scrobbles and imports them if found.
+ * Probe-then-import: checks for new hums and imports them if found.
  *
  * On empty DB, falls through to a full backfill. Returns now-playing info
  * regardless of whether new data was imported.
  */
-export async function syncScrobbles(
+export async function syncHums(
   db: Database,
   fetcher: SourceFetcher,
   options?: SyncOptions
@@ -147,7 +147,7 @@ export async function syncScrobbles(
     }
   }
 
-  const result = await importScrobbles(db, fetcher, {
+  const result = await importHums(db, fetcher, {
     onProgress: options?.onProgress,
   })
 
@@ -165,13 +165,13 @@ export async function syncScrobbles(
 const BASE_DELAY_MS = 200
 
 /**
- * Source-agnostic scrobble import.
+ * Source-agnostic hum import.
  *
  * - Default (no flags): incremental sync — fetches from MAX(listened_at)-1s,
- *   paginates through all new scrobbles. Falls back to full backfill on empty DB.
+ *   paginates through all new hums. Falls back to full backfill on empty DB.
  * - backfill=true: full backfill, paginates all pages (200/page, newest-first).
  */
-export async function importScrobbles(
+export async function importHums(
   db: Database,
   fetcher: SourceFetcher,
   options: ImportOptions
@@ -182,21 +182,21 @@ export async function importScrobbles(
   // Incremental sync: auto-detect `from` unless backfill or explicit `from`
   const paginate = backfill ?? false
   if (!backfill && !from) {
-    const { rows } = await getScrobbles(db, { pageSize: 1 })
+    const { rows } = await getHums(db, { pageSize: 1 })
     const latest = rows[0]
     if (latest) {
       // 1-second overlap — dedup via unique constraint handles duplicates
       from = new Date(latest.listenedAt.getTime() - 1000)
     } else {
       // Empty DB — fall back to full backfill behavior
-      return importScrobbles(db, fetcher, { ...options, backfill: true })
+      return importHums(db, fetcher, { ...options, backfill: true })
     }
   }
 
   // Backfill resume: if backfilling with existing data and no explicit `to`,
   // set to = MIN(listened_at) + 1s so we only fetch pages older than what we have
   if (backfill && !to) {
-    const { rows: earliestRows } = await getScrobbles(db, {
+    const { rows: earliestRows } = await getHums(db, {
       pageSize: 1,
       orderAsc: true,
     })
@@ -253,7 +253,7 @@ export async function importScrobbles(
 
   // After backfill, check completeness against remote source
   let completeness: CompletenessResult | undefined
-  if (backfill && fetcher.getRemotePlaycount) {
+  if (backfill && fetcher.getRemoteTotal) {
     completeness = await checkCompleteness(db, fetcher)
   }
 
@@ -266,16 +266,16 @@ async function checkCompleteness(
   db: Database,
   fetcher: SourceFetcher
 ): Promise<CompletenessResult> {
-  const [stats, remotePlaycount] = await Promise.all([
+  const [stats, remoteTotal] = await Promise.all([
     getStats(db),
-    fetcher.getRemotePlaycount!(),
+    fetcher.getRemoteTotal!(),
   ])
   const localCount = stats.total
   const coveragePercent =
-    remotePlaycount > 0
-      ? Math.round((localCount / remotePlaycount) * 10000) / 100
+    remoteTotal > 0
+      ? Math.round((localCount / remoteTotal) * 10000) / 100
       : 100
-  return { localCount, remotePlaycount, coveragePercent }
+  return { localCount, remoteTotal, coveragePercent }
 }
 
 function delay(ms: number): Promise<void> {

@@ -112,7 +112,7 @@ describe("enrichAlbum", () => {
     expect(callCount).toBe(0)
   })
 
-  it("matches track_id for scrobbled tracks", async () => {
+  it("matches track_id for tracks with hums", async () => {
     const rows = await db
       .select({
         name: albumTracks.name,
@@ -125,7 +125,7 @@ describe("enrichAlbum", () => {
     expect(roygbiv!.trackId).toBe(trackId)
   })
 
-  it("leaves track_id null for unscrobbled tracks", async () => {
+  it("leaves track_id null for tracks without hums", async () => {
     const rows = await db
       .select({
         name: albumTracks.name,

@@ -8,7 +8,7 @@ import type {
   NowPlayingTrack,
   SourceFetcher,
 } from "./source-fetcher"
-import { importScrobbles, syncProbe } from "./source-fetcher"
+import { importHums, syncProbe } from "./source-fetcher"
 
 // --- Fake SourceFetcher ---
 
@@ -53,9 +53,9 @@ describe("syncProbe", () => {
   it("returns needsSync=false when no new data", async () => {
     const { db, client } = await setupTestDb()
     try {
-      // Seed one scrobble
+      // Seed one hum
       const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
-      await importScrobbles(db, new FakeFetcher([seed]), { backfill: true })
+      await importHums(db, new FakeFetcher([seed]), { backfill: true })
 
       // Probe returns empty page (no new tracks)
       const fetcher = new FakeFetcher([[]])
@@ -79,7 +79,7 @@ describe("syncProbe", () => {
     try {
       // Seed existing data
       const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
-      await importScrobbles(db, new FakeFetcher([seed]), { backfill: true })
+      await importHums(db, new FakeFetcher([seed]), { backfill: true })
 
       // Probe returns a new track
       const newTrack = makeListen("Burial", "Ghost Hardware", "2024-06-02T10:00:00Z")
@@ -98,7 +98,7 @@ describe("syncProbe", () => {
     const { db, client } = await setupTestDb()
     try {
       const seed = [makeListen("BoC", "Roygbiv", "2024-01-01T10:00:00Z")]
-      await importScrobbles(db, new FakeFetcher([seed]), { backfill: true })
+      await importHums(db, new FakeFetcher([seed]), { backfill: true })
 
       // 3 pages of new tracks (at pageSize=1, means 3 new tracks)
       const page1 = [makeListen("BoC", "Aquarius", "2024-01-02T10:00:00Z")]
@@ -119,7 +119,7 @@ describe("syncProbe", () => {
     const { db, client } = await setupTestDb()
     try {
       const seed = [makeListen("Autechre", "Clipper", "2024-01-01T10:00:00Z")]
-      await importScrobbles(db, new FakeFetcher([seed]), { backfill: true })
+      await importHums(db, new FakeFetcher([seed]), { backfill: true })
 
       const nowPlaying: NowPlayingTrack = {
         trackName: "Gantz Graf",
@@ -140,7 +140,7 @@ describe("syncProbe", () => {
     const { db, client } = await setupTestDb()
     try {
       const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
-      await importScrobbles(db, new FakeFetcher([seed]), { backfill: true })
+      await importHums(db, new FakeFetcher([seed]), { backfill: true })
 
       // API says 3 pages exist but page 1 returns no listens
       // (e.g., now-playing pushed track off page 1)
@@ -155,7 +155,7 @@ describe("syncProbe", () => {
     }
   })
 
-  it("handles empty DB (no local scrobbles)", async () => {
+  it("handles empty DB (no local hums)", async () => {
     const { db, client } = await setupTestDb()
     try {
       const page1 = [makeListen("Clark", "Ted", "2024-01-01T10:00:00Z")]

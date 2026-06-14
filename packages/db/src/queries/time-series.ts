@@ -6,7 +6,7 @@ import { addArtistCondition, buildFilterConditions } from "./filter"
 import type {
   GetTimeSeriesParams,
   ListeningClockSlot,
-  ScrobbleFilter,
+  HumFilter,
   TimeSeriesBucket,
 } from "./types"
 
@@ -22,15 +22,15 @@ export async function getTimeSeries(
   if (!validPeriods.includes(period)) {
     throw new Error(`Invalid period: ${period}`)
   }
-  const bucket = sql<string>`date_trunc(${sql.raw(`'${period}'`)}, ${schema.scrobbles.listenedAt})`
+  const bucket = sql<string>`date_trunc(${sql.raw(`'${period}'`)}, ${schema.hums.listenedAt})`
 
   const rows = await db
     .select({
       period: bucket,
-      count: count(schema.scrobbles.id),
+      count: count(schema.hums.id),
     })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
+    .from(schema.hums)
+    .innerJoin(schema.tracks, eq(schema.hums.trackId, schema.tracks.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .groupBy(bucket)
     .orderBy(bucket)
@@ -40,21 +40,21 @@ export async function getTimeSeries(
 
 export async function getListeningClock(
   db: Database,
-  params?: ScrobbleFilter
+  params?: HumFilter
 ): Promise<ListeningClockSlot[]> {
   const filter = params ?? {}
   const conditions = buildFilterConditions(filter)
   addArtistCondition(conditions, filter)
 
-  const hour = sql<number>`extract(hour from ${schema.scrobbles.listenedAt})::int`
+  const hour = sql<number>`extract(hour from ${schema.hums.listenedAt})::int`
 
   const rows = await db
     .select({
       hour,
-      count: count(schema.scrobbles.id),
+      count: count(schema.hums.id),
     })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
+    .from(schema.hums)
+    .innerJoin(schema.tracks, eq(schema.hums.trackId, schema.tracks.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .groupBy(hour)
     .orderBy(hour)

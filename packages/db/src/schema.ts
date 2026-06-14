@@ -86,8 +86,8 @@ export const tracks = listenSchema.table(
 
 // --- Fact table ---
 
-export const scrobbles = listenSchema.table(
-  "scrobbles",
+export const hums = listenSchema.table(
+  "hums",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     trackId: integer("track_id")
@@ -99,12 +99,12 @@ export const scrobbles = listenSchema.table(
     ...timestampsWithoutUpdate,
   },
   (t) => [
-    uniqueIndex("scrobbles_track_id_listened_at_idx").on(
+    uniqueIndex("hums_track_id_listened_at_idx").on(
       t.trackId,
       t.listenedAt
     ),
-    index("scrobbles_listened_at_idx").on(t.listenedAt),
-    index("scrobbles_album_id_idx").on(t.albumId),
-    index("scrobbles_source_idx").on(t.source),
+    index("hums_listened_at_idx").on(t.listenedAt),
+    index("hums_album_id_idx").on(t.albumId),
+    index("hums_source_idx").on(t.source),
   ]
 )

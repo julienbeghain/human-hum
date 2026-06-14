@@ -3,7 +3,7 @@ import { and, asc, count, eq } from "drizzle-orm"
 import type { Database } from "../index"
 import * as schema from "../schema"
 import { buildFilterConditions } from "./filter"
-import { topTracksByScrobbles } from "./tracks"
+import { topTracksByHums } from "./tracks"
 import type { AlbumDetail, AlbumDetailTrack, GetAlbumDetailParams } from "./types"
 
 export async function getAlbumDetail(
@@ -27,32 +27,32 @@ export async function getAlbumDetail(
 
   if (!album) return null
 
-  const scrobbleConditions = buildFilterConditions(filter)
-  scrobbleConditions.push(eq(schema.scrobbles.albumId, albumId))
+  const humConditions = buildFilterConditions(filter)
+  humConditions.push(eq(schema.hums.albumId, albumId))
 
-  const playCountResult = await db
-    .select({ playCount: count(schema.scrobbles.id) })
-    .from(schema.scrobbles)
-    .where(and(...scrobbleConditions))
+  const humCountResult = await db
+    .select({ humCount: count(schema.hums.id) })
+    .from(schema.hums)
+    .where(and(...humConditions))
 
-  const playCount = playCountResult[0]?.playCount ?? 0
+  const humCount = humCountResult[0]?.humCount ?? 0
 
   let tracks: AlbumDetailTrack[]
 
   if (album.enrichedAt) {
-    tracks = await getEnrichedTracks(db, albumId, scrobbleConditions)
+    tracks = await getEnrichedTracks(db, albumId, humConditions)
   } else {
-    tracks = await getScrobbleDerivedTracks(db, scrobbleConditions)
+    tracks = await getHumDerivedTracks(db, humConditions)
   }
 
-  return { ...album, playCount, tracks }
+  return { ...album, humCount, tracks }
 }
 
-async function getScrobbleDerivedTracks(
+async function getHumDerivedTracks(
   db: Database,
   conditions: ReturnType<typeof buildFilterConditions>
 ): Promise<AlbumDetailTrack[]> {
-  const rows = await topTracksByScrobbles(db, conditions)
+  const rows = await topTracksByHums(db, conditions)
 
   return rows.map((r) => ({
     ...r,
@@ -64,7 +64,7 @@ async function getScrobbleDerivedTracks(
 async function getEnrichedTracks(
   db: Database,
   albumId: number,
-  scrobbleConditions: ReturnType<typeof buildFilterConditions>
+  humConditions: ReturnType<typeof buildFilterConditions>
 ): Promise<AlbumDetailTrack[]> {
   const rows = await db
     .select({
@@ -72,14 +72,14 @@ async function getEnrichedTracks(
       trackName: schema.albumTracks.name,
       trackNumber: schema.albumTracks.trackNumber,
       duration: schema.albumTracks.duration,
-      playCount: count(schema.scrobbles.id),
+      humCount: count(schema.hums.id),
     })
     .from(schema.albumTracks)
     .leftJoin(
-      schema.scrobbles,
+      schema.hums,
       and(
-        eq(schema.scrobbles.trackId, schema.albumTracks.trackId),
-        ...scrobbleConditions
+        eq(schema.hums.trackId, schema.albumTracks.trackId),
+        ...humConditions
       )
     )
     .where(eq(schema.albumTracks.albumId, albumId))

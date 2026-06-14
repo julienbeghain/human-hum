@@ -4,7 +4,7 @@ export type Source = (typeof schema.sourceEnum.enumValues)[number]
 
 // --- Shared filter applied to every query ---
 
-export type ScrobbleFilter = {
+export type HumFilter = {
   userId?: number // Phase 6
   from?: Date
   to?: Date
@@ -14,16 +14,16 @@ export type ScrobbleFilter = {
   trackId?: number
 }
 
-// --- Scrobble listing ---
+// --- Hum listing ---
 
-export type GetScrobblesParams = ScrobbleFilter & {
+export type GetHumsParams = HumFilter & {
   page?: number // default: 1
   pageSize?: number // default: 50
   cursor?: Date // keyset pagination (ignored when page is set)
   orderAsc?: boolean // default: false (newest first)
 }
 
-export type ScrobbleRow = {
+export type HumRow = {
   id: number
   listenedAt: Date
   source: Source
@@ -34,22 +34,22 @@ export type ScrobbleRow = {
   albumName: string | null
 }
 
-export type PaginatedScrobbles = {
-  rows: ScrobbleRow[]
+export type PaginatedHums = {
+  rows: HumRow[]
   totalCount: number
 }
 
-export type ScrobbleDetail = ScrobbleRow & {
+export type HumDetail = HumRow & {
   trackId: number
   artistId: number
   albumId: number | null
-  trackPlayCount: number
-  artistPlayCount: number
+  trackHumCount: number
+  artistHumCount: number
 }
 
 // --- Stats ---
 
-export type ScrobbleStats = {
+export type HumStats = {
   total: number
   earliest: Date | null
   latest: Date | null
@@ -60,46 +60,46 @@ export type ScrobbleStats = {
 
 // --- Rankings ---
 
-export type GetArtistRankingsParams = ScrobbleFilter & {
+export type GetArtistRankingsParams = HumFilter & {
   topN?: number // default: 50
 }
 
 export type ArtistRanking = {
   artistId: number
   artistName: string
-  playCount: number
+  humCount: number
 }
 
 export type TrackRanking = {
   trackId: number
   trackName: string
-  playCount: number
+  humCount: number
 }
 
 // --- Artist detail ---
 
-export type GetArtistDetailParams = ScrobbleFilter & {
+export type GetArtistDetailParams = HumFilter & {
   artistId: number
 }
 
 export type ArtistDetail = {
   artistId: number
   artistName: string
-  playCount: number
+  humCount: number
   topTracks: TrackRanking[]
-  topAlbums: { albumId: number; albumName: string; playCount: number }[]
+  topAlbums: { albumId: number; albumName: string; humCount: number }[]
 }
 
 // --- Album detail ---
 
-export type GetAlbumDetailParams = ScrobbleFilter & {
+export type GetAlbumDetailParams = HumFilter & {
   albumId: number
 }
 
 export type AlbumDetailTrack = {
   trackId: number | null
   trackName: string
-  playCount: number
+  humCount: number
   trackNumber: number | null
   duration: number | null
 }
@@ -109,7 +109,7 @@ export type AlbumDetail = {
   albumName: string
   artistId: number
   artistName: string
-  playCount: number
+  humCount: number
   enrichedAt: Date | null
   imageUrl: string | null
   tracks: AlbumDetailTrack[]
@@ -119,7 +119,7 @@ export type AlbumDetail = {
 
 export type TimeSeriesPeriod = "day" | "week" | "month" | "year"
 
-export type GetTimeSeriesParams = ScrobbleFilter & {
+export type GetTimeSeriesParams = HumFilter & {
   period: TimeSeriesPeriod
 }
 

@@ -11,8 +11,8 @@ import {
   getArtistDetail,
   getArtistRankings,
   getListeningClock,
-  getScrobbleById,
-  getScrobbles,
+  getHumById,
+  getHums,
   getStats,
   getTimeSeries,
 } from "./queries"
@@ -25,9 +25,9 @@ let db: Database
 let boardsOfCanadaId: number
 let mhtrtcAlbumId: number
 
-// Scrobble IDs for detail tests
-let windowlickerScrobbleId: number
-let roygbivScrobbleId: number
+// Hum IDs for detail tests
+let windowlickerHumId: number
+let roygbivHumId: number
 
 beforeAll(async () => {
   ;({ db, client } = await setupTestDb())
@@ -48,7 +48,7 @@ beforeAll(async () => {
     listenedAt: new Date("2026-01-15T20:00:00Z"),
     source: "lastfm",
   })
-  windowlickerScrobbleId = r1.scrobbleId
+  windowlickerHumId = r1.humId
 
   await recordListen(db, {
     artist: { name: "Aphex Twin" },
@@ -67,7 +67,7 @@ beforeAll(async () => {
   })
   boardsOfCanadaId = r3.artistId
   mhtrtcAlbumId = r3.albumId!
-  roygbivScrobbleId = r3.scrobbleId
+  roygbivHumId = r3.humId
 
   await recordListen(db, {
     artist: { name: "Boards of Canada" },
@@ -96,11 +96,11 @@ afterAll(async () => {
   await client.close()
 })
 
-// --- getScrobbles ---
+// --- getHums ---
 
-describe("getScrobbles", () => {
-  it("returns scrobbles with track and artist names", async () => {
-    const { rows } = await getScrobbles(db)
+describe("getHums", () => {
+  it("returns hums with track and artist names", async () => {
+    const { rows } = await getHums(db)
     expect(rows.length).toBe(6)
 
     const row = rows.find((r) => r.trackName === "Roygbiv")
@@ -111,15 +111,15 @@ describe("getScrobbles", () => {
     expect(row!.listenedAt).toBeInstanceOf(Date)
   })
 
-  it("returns null albumName when scrobble has no album", async () => {
-    const { rows } = await getScrobbles(db)
+  it("returns null albumName when hum has no album", async () => {
+    const { rows } = await getHums(db)
     const row = rows.find((r) => r.trackName === "Windowlicker")
     expect(row).toBeDefined()
     expect(row!.albumName).toBeNull()
   })
 
   it("orders by listenedAt descending by default", async () => {
-    const { rows } = await getScrobbles(db)
+    const { rows } = await getHums(db)
     for (let i = 1; i < rows.length; i++) {
       expect(rows[i - 1]!.listenedAt.getTime()).toBeGreaterThanOrEqual(
         rows[i]!.listenedAt.getTime()
@@ -128,7 +128,7 @@ describe("getScrobbles", () => {
   })
 
   it("orders ascending when orderAsc is true", async () => {
-    const { rows } = await getScrobbles(db, { orderAsc: true })
+    const { rows } = await getHums(db, { orderAsc: true })
     for (let i = 1; i < rows.length; i++) {
       expect(rows[i - 1]!.listenedAt.getTime()).toBeLessThanOrEqual(
         rows[i]!.listenedAt.getTime()
@@ -137,10 +137,10 @@ describe("getScrobbles", () => {
   })
 
   it("supports cursor-based pagination", async () => {
-    const first = await getScrobbles(db, { pageSize: 2 })
+    const first = await getHums(db, { pageSize: 2 })
     expect(first.rows.length).toBe(2)
 
-    const next = await getScrobbles(db, {
+    const next = await getHums(db, {
       pageSize: 2,
       cursor: first.rows[1]!.listenedAt,
     })
@@ -155,7 +155,7 @@ describe("getScrobbles", () => {
   it("filters by time range (from and to)", async () => {
     const from = new Date("2025-01-01T00:00:00Z")
     const to = new Date("2026-01-31T23:59:59Z")
-    const { rows } = await getScrobbles(db, { from, to })
+    const { rows } = await getHums(db, { from, to })
 
     expect(rows.length).toBe(2) // Autechre Bike + Aphex Twin Windowlicker
     for (const row of rows) {
@@ -165,7 +165,7 @@ describe("getScrobbles", () => {
   })
 
   it("filters by source", async () => {
-    const { rows } = await getScrobbles(db, { source: "spotify" })
+    const { rows } = await getHums(db, { source: "spotify" })
     expect(rows.length).toBe(2)
     for (const row of rows) {
       expect(row.source).toBe("spotify")
@@ -175,17 +175,17 @@ describe("getScrobbles", () => {
   // --- Offset pagination ---
 
   it("returns totalCount alongside rows", async () => {
-    const result = await getScrobbles(db)
+    const result = await getHums(db)
     expect(result.totalCount).toBe(6)
     expect(result.rows.length).toBe(6)
   })
 
   it("paginates with page and pageSize", async () => {
-    const page1 = await getScrobbles(db, { page: 1, pageSize: 2 })
+    const page1 = await getHums(db, { page: 1, pageSize: 2 })
     expect(page1.rows.length).toBe(2)
     expect(page1.totalCount).toBe(6)
 
-    const page2 = await getScrobbles(db, { page: 2, pageSize: 2 })
+    const page2 = await getHums(db, { page: 2, pageSize: 2 })
     expect(page2.rows.length).toBe(2)
     expect(page2.totalCount).toBe(6)
 
@@ -196,13 +196,13 @@ describe("getScrobbles", () => {
   })
 
   it("returns empty rows for page beyond data", async () => {
-    const result = await getScrobbles(db, { page: 100, pageSize: 50 })
+    const result = await getHums(db, { page: 100, pageSize: 50 })
     expect(result.rows.length).toBe(0)
     expect(result.totalCount).toBe(6)
   })
 
   it("totalCount respects filters", async () => {
-    const result = await getScrobbles(db, {
+    const result = await getHums(db, {
       source: "spotify",
       page: 1,
       pageSize: 10,
@@ -212,33 +212,33 @@ describe("getScrobbles", () => {
   })
 })
 
-// --- getScrobbleById ---
+// --- getHumById ---
 
-describe("getScrobbleById", () => {
-  it("returns scrobble with track/artist info and play counts", async () => {
-    const detail = await getScrobbleById(db, roygbivScrobbleId)
+describe("getHumById", () => {
+  it("returns hum with track/artist info and play counts", async () => {
+    const detail = await getHumById(db, roygbivHumId)
     expect(detail).not.toBeNull()
     expect(detail!.trackName).toBe("Roygbiv")
     expect(detail!.artistName).toBe("Boards of Canada")
     expect(detail!.albumName).toBe("Music Has the Right to Children")
     expect(detail!.albumId).toBe(mhtrtcAlbumId)
     expect(detail!.artistId).toBe(boardsOfCanadaId)
-    // BoC has 2 scrobbles total (Roygbiv + Aquarius)
-    expect(detail!.artistPlayCount).toBe(2)
-    // Roygbiv is scrobbled once
-    expect(detail!.trackPlayCount).toBe(1)
+    // BoC has 2 hums total (Roygbiv + Aquarius)
+    expect(detail!.artistHumCount).toBe(2)
+    // Roygbiv has one hum
+    expect(detail!.trackHumCount).toBe(1)
   })
 
-  it("returns null albumName when scrobble has no album", async () => {
-    const detail = await getScrobbleById(db, windowlickerScrobbleId)
+  it("returns null albumName when hum has no album", async () => {
+    const detail = await getHumById(db, windowlickerHumId)
     expect(detail).not.toBeNull()
     expect(detail!.trackName).toBe("Windowlicker")
     expect(detail!.albumId).toBeNull()
     expect(detail!.albumName).toBeNull()
   })
 
-  it("returns null for non-existent scrobble", async () => {
-    const detail = await getScrobbleById(db, 99999)
+  it("returns null for non-existent hum", async () => {
+    const detail = await getHumById(db, 99999)
     expect(detail).toBeNull()
   })
 })
@@ -279,8 +279,8 @@ describe("getArtistRankings", () => {
     expect(rankings.length).toBe(3)
     // All artists have 2 plays — verify ordering is stable (descending)
     for (let i = 1; i < rankings.length; i++) {
-      expect(rankings[i - 1]!.playCount).toBeGreaterThanOrEqual(
-        rankings[i]!.playCount
+      expect(rankings[i - 1]!.humCount).toBeGreaterThanOrEqual(
+        rankings[i]!.humCount
       )
     }
     expect(rankings[0]!.artistName).toBeTruthy()
@@ -308,7 +308,7 @@ describe("getArtistDetail", () => {
     const detail = await getArtistDetail(db, { artistId: boardsOfCanadaId })
     expect(detail).not.toBeNull()
     expect(detail!.artistName).toBe("Boards of Canada")
-    expect(detail!.playCount).toBe(2)
+    expect(detail!.humCount).toBe(2)
     expect(detail!.topTracks.length).toBe(2)
     expect(detail!.topAlbums.length).toBe(1)
     expect(detail!.topAlbums[0]!.albumName).toBe(
@@ -356,8 +356,8 @@ describe("getArtistDetail (top-tracks cap)", () => {
     expect(detail).not.toBeNull()
     expect(detail!.topTracks.length).toBe(10)
     for (let i = 1; i < detail!.topTracks.length; i++) {
-      expect(detail!.topTracks[i - 1]!.playCount).toBeGreaterThanOrEqual(
-        detail!.topTracks[i]!.playCount
+      expect(detail!.topTracks[i - 1]!.humCount).toBeGreaterThanOrEqual(
+        detail!.topTracks[i]!.humCount
       )
     }
     // Most-played track surfaces first; the two least-played are dropped.
@@ -375,7 +375,7 @@ describe("getAlbumDetail", () => {
     expect(album).not.toBeNull()
     expect(album!.albumName).toBe("Music Has the Right to Children")
     expect(album!.artistName).toBe("Boards of Canada")
-    expect(album!.playCount).toBe(2)
+    expect(album!.humCount).toBe(2)
     expect(album!.tracks.length).toBe(2)
   })
 
@@ -385,7 +385,7 @@ describe("getAlbumDetail", () => {
     expect(album!.imageUrl).toBeNull()
     expect(album!.tracks[0]!.trackNumber).toBeNull()
     expect(album!.tracks[0]!.duration).toBeNull()
-    expect(album!.tracks[0]!.playCount).toBeGreaterThanOrEqual(album!.tracks[1]!.playCount)
+    expect(album!.tracks[0]!.humCount).toBeGreaterThanOrEqual(album!.tracks[1]!.humCount)
   })
 
   it("returns null for non-existent album", async () => {
@@ -397,7 +397,7 @@ describe("getAlbumDetail", () => {
 // --- getTimeSeries ---
 
 describe("getTimeSeries", () => {
-  it("buckets scrobbles by month", async () => {
+  it("buckets hums by month", async () => {
     const series = await getTimeSeries(db, { period: "month" })
     expect(series.length).toBeGreaterThan(0)
     for (const bucket of series) {
@@ -406,7 +406,7 @@ describe("getTimeSeries", () => {
     }
   })
 
-  it("buckets scrobbles by year", async () => {
+  it("buckets hums by year", async () => {
     const series = await getTimeSeries(db, { period: "year" })
     // 2020, 2024, 2025, 2026
     expect(series.length).toBe(4)
@@ -435,13 +435,13 @@ describe("getListeningClock", () => {
     expect(clock[23]!.hour).toBe(23)
   })
 
-  it("counts scrobbles per hour", async () => {
+  it("counts hums per hour", async () => {
     const clock = await getListeningClock(db)
     const totalCount = clock.reduce((sum, s) => sum + s.count, 0)
     expect(totalCount).toBe(6)
   })
 
-  it("populates exactly the hours with scrobbles", async () => {
+  it("populates exactly the hours with hums", async () => {
     // Seed hours: 0 (Clipper), 10 (Roygbiv), 11 (Aquarius), 12 (Vordhosbn), 20 (Windowlicker), 23 (Bike)
     const clock = await getListeningClock(db)
     const populated = clock.filter((s) => s.count > 0)
@@ -520,28 +520,28 @@ describe("getAlbumDetail (enriched album)", () => {
     ])
   })
 
-  it("shows 0 plays for unscrobbled tracks and live counts for scrobbled ones", async () => {
+  it("shows 0 plays for tracks with no hums and live counts for tracks with hums", async () => {
     const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
     const tracks = album!.tracks
 
     const wildlife = tracks.find((t) => t.trackName === "Wildlife Analysis")!
-    expect(wildlife.playCount).toBe(0)
+    expect(wildlife.humCount).toBe(0)
     expect(wildlife.trackId).toBeNull()
 
     const eagle = tracks.find((t) => t.trackName === "An Eagle in Your Mind")!
-    expect(eagle.playCount).toBe(0)
+    expect(eagle.humCount).toBe(0)
     expect(eagle.trackId).toBeNull()
 
     const roygbiv = tracks.find((t) => t.trackName === "Roygbiv")!
-    expect(roygbiv.playCount).toBe(1)
+    expect(roygbiv.humCount).toBe(1)
     expect(roygbiv.trackId).not.toBeNull()
 
     const aquarius = tracks.find((t) => t.trackName === "Aquarius")!
-    expect(aquarius.playCount).toBe(1)
+    expect(aquarius.humCount).toBe(1)
     expect(aquarius.trackId).not.toBeNull()
   })
 
-  it("reflects new scrobbles without re-enrichment", async () => {
+  it("reflects new hums without re-enrichment", async () => {
     await recordListen(enrichedDb, {
       artist: { name: "Boards of Canada" },
       track: { name: "Roygbiv" },
@@ -552,7 +552,7 @@ describe("getAlbumDetail (enriched album)", () => {
 
     const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
     const roygbiv = album!.tracks.find((t) => t.trackName === "Roygbiv")!
-    expect(roygbiv.playCount).toBe(2)
-    expect(album!.playCount).toBe(3)
+    expect(roygbiv.humCount).toBe(2)
+    expect(album!.humCount).toBe(3)
   })
 })

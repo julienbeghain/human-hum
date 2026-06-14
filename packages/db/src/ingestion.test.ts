@@ -33,11 +33,11 @@ describe("recordListen", () => {
     source: "lastfm" as const,
   }
 
-  it("creates artist, album, track, and scrobble for a complete listen", async () => {
+  it("creates artist, album, track, and hum for a complete listen", async () => {
     const result = await recordListen(db, listen)
 
     expect(result.wasNew).toBe(true)
-    expect(result.scrobbleId).toBeGreaterThan(0)
+    expect(result.humId).toBeGreaterThan(0)
     expect(result.artistId).toBeGreaterThan(0)
     expect(result.albumId).toBeGreaterThan(0)
     expect(result.trackId).toBeGreaterThan(0)
@@ -48,7 +48,7 @@ describe("recordListen", () => {
     const second = await recordListen(db, listen)
 
     expect(second.wasNew).toBe(false)
-    expect(second.scrobbleId).toBe(first.scrobbleId)
+    expect(second.humId).toBe(first.humId)
     expect(second.artistId).toBe(first.artistId)
     expect(second.albumId).toBe(first.albumId)
     expect(second.trackId).toBe(first.trackId)
@@ -114,6 +114,6 @@ describe("recordListen", () => {
     expect(b.artistId).toBe(a.artistId)
     expect(b.albumId).toBe(a.albumId)
     expect(b.trackId).not.toBe(a.trackId)
-    expect(b.scrobbleId).not.toBe(a.scrobbleId)
+    expect(b.humId).not.toBe(a.humId)
   })
 })

@@ -3,7 +3,7 @@ import { and, count, desc, eq } from "drizzle-orm"
 import type { Database } from "../index"
 import * as schema from "../schema"
 import { buildFilterConditions } from "./filter"
-import { topTracksByScrobbles } from "./tracks"
+import { topTracksByHums } from "./tracks"
 import type {
   ArtistDetail,
   ArtistRanking,
@@ -23,14 +23,14 @@ export async function getArtistRankings(
     .select({
       artistId: schema.artists.id,
       artistName: schema.artists.name,
-      playCount: count(schema.scrobbles.id),
+      humCount: count(schema.hums.id),
     })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
+    .from(schema.hums)
+    .innerJoin(schema.tracks, eq(schema.hums.trackId, schema.tracks.id))
     .innerJoin(schema.artists, eq(schema.tracks.artistId, schema.artists.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .groupBy(schema.artists.id, schema.artists.name)
-    .orderBy(desc(count(schema.scrobbles.id)))
+    .orderBy(desc(count(schema.hums.id)))
     .limit(topN)
 }
 
@@ -47,10 +47,10 @@ export async function getArtistDetail(
     .select({
       artistId: schema.artists.id,
       artistName: schema.artists.name,
-      playCount: count(schema.scrobbles.id),
+      humCount: count(schema.hums.id),
     })
-    .from(schema.scrobbles)
-    .innerJoin(schema.tracks, eq(schema.scrobbles.trackId, schema.tracks.id))
+    .from(schema.hums)
+    .innerJoin(schema.tracks, eq(schema.hums.trackId, schema.tracks.id))
     .innerJoin(schema.artists, eq(schema.tracks.artistId, schema.artists.id))
     .where(and(...conditions))
     .groupBy(schema.artists.id, schema.artists.name)
@@ -58,7 +58,7 @@ export async function getArtistDetail(
   if (!artist) return null
 
   // Top tracks for this artist
-  const topTracks = await topTracksByScrobbles(db, conditions, 10)
+  const topTracks = await topTracksByHums(db, conditions, 10)
 
   // Top albums for this artist (join albums directly)
   const albumConditions = buildFilterConditions(filter)
@@ -68,13 +68,13 @@ export async function getArtistDetail(
     .select({
       albumId: schema.albums.id,
       albumName: schema.albums.name,
-      playCount: count(schema.scrobbles.id),
+      humCount: count(schema.hums.id),
     })
-    .from(schema.scrobbles)
-    .innerJoin(schema.albums, eq(schema.scrobbles.albumId, schema.albums.id))
+    .from(schema.hums)
+    .innerJoin(schema.albums, eq(schema.hums.albumId, schema.albums.id))
     .where(and(...albumConditions))
     .groupBy(schema.albums.id, schema.albums.name)
-    .orderBy(desc(count(schema.scrobbles.id)))
+    .orderBy(desc(count(schema.hums.id)))
     .limit(10)
 
   return { ...artist, topTracks, topAlbums }

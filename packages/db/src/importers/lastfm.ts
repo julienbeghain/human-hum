@@ -10,7 +10,7 @@ import type {
 } from "./source-fetcher"
 
 // Re-export orchestration for convenience
-export { importScrobbles, syncProbe, syncScrobbles } from "./source-fetcher"
+export { importHums, syncProbe, syncHums } from "./source-fetcher"
 export type {
   CompletenessResult,
   ImportOptions,
@@ -107,7 +107,7 @@ export class LastfmFetcher implements SourceFetcher {
     return { listens, totalPages, skippedCount, nowPlaying }
   }
 
-  async getRemotePlaycount(): Promise<number> {
+  async getRemoteTotal(): Promise<number> {
     const url = lastfmUrl(this.apiKey, {
       method: "user.getInfo",
       user: this.user,

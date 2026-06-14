@@ -5,7 +5,7 @@ vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "../index"
 import type { ListenInput, Source } from "../ingestion"
-import { getScrobbles } from "../queries"
+import { getHums } from "../queries"
 import { setupTestDb } from "../test-utils"
 import type {
   FetchPageParams,
@@ -14,7 +14,7 @@ import type {
   PageProgress,
   SourceFetcher,
 } from "./source-fetcher"
-import { importScrobbles, syncScrobbles } from "./source-fetcher"
+import { importHums, syncHums } from "./source-fetcher"
 
 // --- Fake SourceFetcher ---
 
@@ -34,28 +34,28 @@ function makeListen(
 }
 
 interface FakeFetcherOptions {
-  remotePlaycount?: number
+  remoteTotal?: number
   nowPlaying?: NowPlayingTrack
 }
 
 class FakeFetcher implements SourceFetcher {
   readonly source: Source = "lastfm"
   readonly calls: FetchPageParams[] = []
-  getRemotePlaycount?: () => Promise<number>
+  getRemoteTotal?: () => Promise<number>
   private nowPlaying?: NowPlayingTrack
 
   constructor(pages: ListenInput[][], options?: FakeFetcherOptions)
-  constructor(pages: ListenInput[][], remotePlaycount?: number)
+  constructor(pages: ListenInput[][], remoteTotal?: number)
   constructor(
     private pages: ListenInput[][],
-    optionsOrPlaycount?: FakeFetcherOptions | number
+    optionsOrTotal?: FakeFetcherOptions | number
   ) {
     const opts =
-      typeof optionsOrPlaycount === "number"
-        ? { remotePlaycount: optionsOrPlaycount }
-        : optionsOrPlaycount
-    if (opts?.remotePlaycount !== undefined) {
-      this.getRemotePlaycount = async () => opts.remotePlaycount!
+      typeof optionsOrTotal === "number"
+        ? { remoteTotal: optionsOrTotal }
+        : optionsOrTotal
+    if (opts?.remoteTotal !== undefined) {
+      this.getRemoteTotal = async () => opts.remoteTotal!
     }
     this.nowPlaying = opts?.nowPlaying
   }
@@ -86,7 +86,7 @@ afterAll(async () => {
   await client.close()
 })
 
-describe("importScrobbles", () => {
+describe("importHums", () => {
   it("imports a single page of listens into the database", async () => {
     const listens = [
       makeListen("Autechre", "Clipper", "2020-06-01T10:00:00Z"),
@@ -94,13 +94,13 @@ describe("importScrobbles", () => {
     ]
     const fetcher = new FakeFetcher([listens])
 
-    const result = await importScrobbles(db, fetcher, { backfill: true })
+    const result = await importHums(db, fetcher, { backfill: true })
 
     expect(result.totalImported).toBe(2)
     expect(result.totalSkipped).toBe(0)
     expect(result.pagesProcessed).toBe(1)
 
-    const { rows } = await getScrobbles(db)
+    const { rows } = await getHums(db)
     const trackNames = rows.map((r) => r.trackName)
     expect(trackNames).toContain("Clipper")
     expect(trackNames).toContain("Bike")
@@ -114,7 +114,7 @@ describe("importScrobbles", () => {
       const page2 = [makeListen("BoC", "Aquarius", "2024-01-01T11:00:00Z")]
       const fetcher = new FakeFetcher([page1, page2])
 
-      const result = await importScrobbles(freshDb, fetcher, { backfill: true })
+      const result = await importHums(freshDb, fetcher, { backfill: true })
 
       expect(result.pagesProcessed).toBe(2)
       expect(result.totalImported).toBe(2)
@@ -135,9 +135,9 @@ describe("importScrobbles", () => {
       const fetcher = new FakeFetcher([listens])
 
       // Import once
-      await importScrobbles(freshDb, fetcher, { backfill: true })
+      await importHums(freshDb, fetcher, { backfill: true })
       // Import same data again
-      const result = await importScrobbles(freshDb, fetcher, { backfill: true })
+      const result = await importHums(freshDb, fetcher, { backfill: true })
 
       expect(result.totalImported).toBe(0)
       expect(result.totalSkipped).toBe(1)
@@ -155,7 +155,7 @@ describe("importScrobbles", () => {
       const fetcher = new FakeFetcher([listens])
 
       // No backfill flag, no from — should detect empty DB and backfill
-      const result = await importScrobbles(freshDb, fetcher, {})
+      const result = await importHums(freshDb, fetcher, {})
 
       expect(result.totalImported).toBe(1)
       expect(result.pagesProcessed).toBe(1)
@@ -164,13 +164,13 @@ describe("importScrobbles", () => {
     }
   })
 
-  it("incremental sync sets from based on latest scrobble", async () => {
+  it("incremental sync sets from based on latest hum", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
-      // Seed one existing scrobble
+      // Seed one existing hum
       const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
       const seedFetcher = new FakeFetcher([seed])
-      await importScrobbles(freshDb, seedFetcher, { backfill: true })
+      await importHums(freshDb, seedFetcher, { backfill: true })
 
       // Now incremental sync — fetcher should receive from ≈ latest - 1s
       const newListens = [
@@ -178,11 +178,11 @@ describe("importScrobbles", () => {
       ]
       const syncFetcher = new FakeFetcher([newListens])
 
-      await importScrobbles(freshDb, syncFetcher, {})
+      await importHums(freshDb, syncFetcher, {})
 
       expect(syncFetcher.calls.length).toBe(1)
       const fromParam = syncFetcher.calls[0]!.from!
-      // Should be ~1 second before the latest scrobble
+      // Should be ~1 second before the latest hum
       const expectedFrom = new Date("2024-06-01T21:59:59Z")
       expect(fromParam.getTime()).toBe(expectedFrom.getTime())
     } finally {
@@ -190,13 +190,13 @@ describe("importScrobbles", () => {
     }
   })
 
-  it("backfill resume sets to based on earliest scrobble", async () => {
+  it("backfill resume sets to based on earliest hum", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       // Seed existing data (as if a partial backfill already ran)
       const seed = [makeListen("BoC", "Roygbiv", "2024-05-01T10:00:00Z")]
       const seedFetcher = new FakeFetcher([seed])
-      await importScrobbles(freshDb, seedFetcher, { backfill: true })
+      await importHums(freshDb, seedFetcher, { backfill: true })
 
       // Resume backfill — should set to = earliest + 1s
       const olderListens = [
@@ -204,7 +204,7 @@ describe("importScrobbles", () => {
       ]
       const resumeFetcher = new FakeFetcher([olderListens])
 
-      await importScrobbles(freshDb, resumeFetcher, { backfill: true })
+      await importHums(freshDb, resumeFetcher, { backfill: true })
 
       expect(resumeFetcher.calls.length).toBe(1)
       const toParam = resumeFetcher.calls[0]!.to!
@@ -223,7 +223,7 @@ describe("importScrobbles", () => {
       const fetcher = new FakeFetcher([page1, page2])
 
       const progress: PageProgress[] = []
-      await importScrobbles(freshDb, fetcher, {
+      await importHums(freshDb, fetcher, {
         backfill: true,
         onProgress: (p) => progress.push({ ...p }),
       })
@@ -238,7 +238,7 @@ describe("importScrobbles", () => {
     }
   })
 
-  it("checks completeness after backfill when fetcher provides getRemotePlaycount", async () => {
+  it("checks completeness after backfill when fetcher provides getRemoteTotal", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       const listens = [
@@ -247,24 +247,24 @@ describe("importScrobbles", () => {
       ]
       const fetcher = new FakeFetcher([listens], 10)
 
-      const result = await importScrobbles(freshDb, fetcher, { backfill: true })
+      const result = await importHums(freshDb, fetcher, { backfill: true })
 
       expect(result.completeness).toBeDefined()
       expect(result.completeness!.localCount).toBe(2)
-      expect(result.completeness!.remotePlaycount).toBe(10)
+      expect(result.completeness!.remoteTotal).toBe(10)
       expect(result.completeness!.coveragePercent).toBe(20)
     } finally {
       await freshClient.close()
     }
   })
 
-  it("skips completeness check when fetcher has no getRemotePlaycount", async () => {
+  it("skips completeness check when fetcher has no getRemoteTotal", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       const listens = [makeListen("Clark", "Ted", "2024-01-01T10:00:00Z")]
       const fetcher = new FakeFetcher([listens])
 
-      const result = await importScrobbles(freshDb, fetcher, { backfill: true })
+      const result = await importHums(freshDb, fetcher, { backfill: true })
 
       expect(result.completeness).toBeUndefined()
     } finally {
@@ -273,18 +273,18 @@ describe("importScrobbles", () => {
   })
 })
 
-describe("syncScrobbles", () => {
+describe("syncHums", () => {
   it("skips import when no new data available", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       // Seed existing data
       const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
-      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+      await importHums(freshDb, new FakeFetcher([seed]), { backfill: true })
 
       // Probe returns empty — nothing to sync
       const fetcher = new FakeFetcher([[]])
 
-      const result = await syncScrobbles(freshDb, fetcher)
+      const result = await syncHums(freshDb, fetcher)
 
       expect(result.needsSync).toBe(false)
       expect(result.imported).toBe(0)
@@ -294,12 +294,12 @@ describe("syncScrobbles", () => {
     }
   })
 
-  it("imports new scrobbles when available", async () => {
+  it("imports new hums when available", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       // Seed existing data
       const seed = [makeListen("Burial", "Archangel", "2024-06-01T22:00:00Z")]
-      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+      await importHums(freshDb, new FakeFetcher([seed]), { backfill: true })
 
       // New data available
       const newListens = [
@@ -308,13 +308,13 @@ describe("syncScrobbles", () => {
       ]
       const fetcher = new FakeFetcher([newListens])
 
-      const result = await syncScrobbles(freshDb, fetcher)
+      const result = await syncHums(freshDb, fetcher)
 
       expect(result.needsSync).toBe(true)
       expect(result.imported).toBe(2)
       expect(result.pagesProcessed).toBe(1)
 
-      const { rows } = await getScrobbles(freshDb)
+      const { rows } = await getHums(freshDb)
       expect(rows.length).toBe(3)
     } finally {
       await freshClient.close()
@@ -325,7 +325,7 @@ describe("syncScrobbles", () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       const seed = [makeListen("Autechre", "Clipper", "2024-01-01T10:00:00Z")]
-      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+      await importHums(freshDb, new FakeFetcher([seed]), { backfill: true })
 
       const nowPlaying: NowPlayingTrack = {
         trackName: "Gantz Graf",
@@ -334,7 +334,7 @@ describe("syncScrobbles", () => {
       }
       const fetcher = new FakeFetcher([[]], { nowPlaying })
 
-      const result = await syncScrobbles(freshDb, fetcher)
+      const result = await syncHums(freshDb, fetcher)
 
       expect(result.nowPlaying).toEqual(nowPlaying)
     } finally {
@@ -346,14 +346,14 @@ describe("syncScrobbles", () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
     try {
       const seed = [makeListen("BoC", "Roygbiv", "2024-01-01T10:00:00Z")]
-      await importScrobbles(freshDb, new FakeFetcher([seed]), { backfill: true })
+      await importHums(freshDb, new FakeFetcher([seed]), { backfill: true })
 
       const page1 = [makeListen("BoC", "Aquarius", "2024-01-02T10:00:00Z")]
       const page2 = [makeListen("BoC", "Happy Cycling", "2024-01-03T10:00:00Z")]
       const fetcher = new FakeFetcher([page1, page2])
 
       const progress: PageProgress[] = []
-      await syncScrobbles(freshDb, fetcher, {
+      await syncHums(freshDb, fetcher, {
         onProgress: (p) => progress.push({ ...p }),
       })
 
@@ -374,7 +374,7 @@ describe("syncScrobbles", () => {
       ]
       const fetcher = new FakeFetcher([listens])
 
-      const result = await syncScrobbles(freshDb, fetcher)
+      const result = await syncHums(freshDb, fetcher)
 
       expect(result.needsSync).toBe(true)
       expect(result.imported).toBe(2)

@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774215520779,
-      "tag": "0000_dark_robbie_robertson",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774305066841,
-      "tag": "0001_bizarre_shooting_star",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774305269405,
-      "tag": "0002_rare_thunderball",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1778757266312,
-      "tag": "0003_exotic_wolf_cub",
+      "when": 1781474711483,
+      "tag": "0000_needy_selene",
       "breakpoints": true
     }
   ]

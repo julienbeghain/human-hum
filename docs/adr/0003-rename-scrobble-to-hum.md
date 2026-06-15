@@ -44,12 +44,12 @@ Everywhere else, "scrobble" should be grep-clean.
 
 **Make "hum" a verb too** ("to hum a track"). Rejected: the act already has a clear verb, `listen`. Keeping `hum` a noun-only artifact and `listen` the act/verb keeps `recordListen()` honest and the types legible.
 
-**Migrate the data with `ALTER ... RENAME` instead of squashing.** Rejected: the DB is wiped and re-imported from Last.fm, so a squash to a fresh `0000` is simpler and makes "grep-clean" literally true (no pre-rename SQL lingers in the applied migration set). Pre-squash history stays in git.
+**Migrate the data with `ALTER ... RENAME` instead of squashing.** Rejected: the DB is wiped and re-imported from Last.fm, so a squash to a fresh `0000` is simpler. An additive rename would also leave `"scrobbles"` in the immutable `drizzle/meta` snapshots forever, making the "grep-clean" criterion impossible to satisfy literally. The squash discards pre-squash history (including the `0002` album_id data-migration), but it stays recoverable in git and its rationale lives in ADR-0001.
 
 ## Consequences
 
 - The user sees "hums" in the UI and at `/hums`; the developer reads one consistent term; the next source integrator inherits product-native language.
 - A single `humCount` family removes the "which count is canonical?" guessing; `remoteTotal` is unmistakably the completeness denominator, not our count.
 - The existing test suite acts as a regression net: every test asserts the *same external behavior* against the new names, never the rename mechanics.
-- "Scrobble" surviving only at the documented carve-outs means a single grep verifies the leak is closed.
-- ADR-0001 and ADR-0002 remain accurate via forward-notes without being rewritten; ADR-0002's unbuilt auth spec now points `user_id` at `listen.hums`.
+- "Scrobble" surviving only at the documented carve-outs means a grep verifies the leak is closed — but "grep-clean" is scoped, not absolute: it excludes generated/vendored artifacts (`.next/`, `graphify-out/`, `drizzle/meta/`), the `audioscrobbler.com` hostname, the kept `data.user.playcount` field, and the quoted-historical text in ADR-0001/0002.
+- ADR-0001 and ADR-0002 keep "scrobble" in their bodies (immutable records), each gaining a dated forward-note pointing here. This matters because the domain-doc contract (`docs/agents/domain.md`) binds downstream skills to an ADR's vocabulary when they work in its area — ADR-0002 is an accepted-but-unbuilt auth spec, so without the note an implementer would reintroduce "scrobble" straight from the spec (its `user_id` now points at `listen.hums`).

@@ -26,9 +26,8 @@ export default async function AlbumDetailPage(props: {
       await enrichAlbum(db, { albumId })
       album = (await getAlbumDetail(db, { albumId }))!
     } catch (error) {
-      // Enrichment failed — render with hum-derived fallback. Surface the
-      // failure so a broken album is diagnosable (human-hum-51); a structured
-      // logger is deferred to human-hum-gz2.
+      // Enrichment failed — render with hum-derived fallback. Log so a broken
+      // album stays diagnosable; structured logging is a deferred follow-up.
       console.error(`Album enrichment failed for albumId=${albumId}:`, error)
     }
   }

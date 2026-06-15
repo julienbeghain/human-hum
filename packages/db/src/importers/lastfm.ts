@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z, ZodError } from "zod"
 
 import { LastfmApiError, lastfmFetch, lastfmUrl } from "../lastfm-api"
 import type { ListenInput, Source } from "../ingestion"
@@ -145,10 +145,14 @@ async function fetchWithRetry(url: URL): Promise<LastfmResponse> {
     try {
       return await lastfmFetch(url, lastfmRecentTracksSchema)
     } catch (err) {
-      // 4xx client errors (except 429) never succeed on retry. Network errors,
-      // 429 rate-limits, and 5xx server errors are transient — back off and retry.
+      // 4xx client errors (except 429) and schema-validation failures never
+      // succeed on retry — a validation failure means a bad api_key/user (the
+      // error envelope returns HTTP 200 but fails the schema), a permanent
+      // config error. Network errors, 429 rate-limits, and 5xx server errors
+      // are transient — back off and retry.
       const fatal =
-        err instanceof LastfmApiError && err.status !== 429 && err.status < 500
+        err instanceof ZodError ||
+        (err instanceof LastfmApiError && err.status !== 429 && err.status < 500)
       if (fatal || attempt >= MAX_RETRIES) throw err
 
       await delay(BASE_DELAY_MS * Math.pow(2, attempt))

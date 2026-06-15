@@ -259,6 +259,19 @@ describe("LastfmFetcher.fetchPage retry behavior", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it("fails fast on a validation error (Last.fm error envelope at HTTP 200)", async () => {
+    // A bad api_key/user surfaces as Last.fm's error envelope returned with a
+    // 200 status, which fails the zod schema. That's a permanent config error,
+    // not a transient one — it must not be retried.
+    const fetchMock = stubFetch(
+      okResponse({ error: 6, message: "User not found" })
+    )
+
+    await expect(fetcher.fetchPage(params)).rejects.toThrow()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it("gives up after exhausting MAX_RETRIES on persistent 5xx", async () => {
     vi.useFakeTimers()
     // 1 initial + 5 retries = 6 attempts, all failing.

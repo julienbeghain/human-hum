@@ -1,8 +1,9 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
 import { getHumById } from "@workspace/db/queries"
+
+import { HumHeader } from "@/components/hum-header"
 
 function formatTimestamp(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -25,27 +26,7 @@ export default async function HumDetailPage(props: {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{hum.trackName}</h1>
-        <p className="text-lg text-muted-foreground">
-          <Link
-            href={`/artists/${hum.artistId}`}
-            className="hover:underline"
-          >
-            {hum.artistName}
-          </Link>
-        </p>
-        {hum.albumId && hum.albumName && (
-          <p className="text-muted-foreground">
-            <Link
-              href={`/albums/${hum.albumId}`}
-              className="hover:underline"
-            >
-              {hum.albumName}
-            </Link>
-          </p>
-        )}
-      </div>
+      <HumHeader {...hum} />
 
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="flex flex-col gap-1">

@@ -2,9 +2,7 @@ import { IconDisc } from "@tabler/icons-react"
 import Image from "next/image"
 import Link from "next/link"
 
-import type { getAlbumDetail } from "@workspace/db/queries"
-
-type AlbumDetail = NonNullable<Awaited<ReturnType<typeof getAlbumDetail>>>
+import type { AlbumDetail } from "@workspace/db/queries"
 
 type AlbumHeaderProps = Pick<
   AlbumDetail,

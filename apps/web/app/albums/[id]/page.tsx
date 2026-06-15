@@ -15,13 +15,14 @@ async function loadAlbumDetail(albumId: number) {
 
   try {
     await enrichAlbum(db, { albumId })
-    return (await getAlbumDetail(db, { albumId }))!
   } catch (error) {
     // Enrichment failed — render with hum-derived fallback. Log so a broken
     // album stays diagnosable; structured logging is a deferred follow-up.
     console.error(`Album enrichment failed for albumId=${albumId}:`, error)
     return album
   }
+
+  return (await getAlbumDetail(db, { albumId }))!
 }
 
 export default async function AlbumDetailPage(props: {

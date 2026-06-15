@@ -1,11 +1,9 @@
 import Link from "next/link"
 
-import type { getHumById } from "@workspace/db/queries"
-
-type Hum = NonNullable<Awaited<ReturnType<typeof getHumById>>>
+import type { HumDetail } from "@workspace/db/queries"
 
 type HumHeaderProps = Pick<
-  Hum,
+  HumDetail,
   "trackName" | "artistId" | "artistName" | "albumId" | "albumName"
 >
 

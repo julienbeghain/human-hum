@@ -91,12 +91,7 @@ export async function syncProbe(
   db: Database,
   fetcher: SourceFetcher
 ): Promise<SyncProbeResult> {
-  const { rows } = await getHums(db, { pageSize: 1 })
-  const latest = rows[0]
-
-  const from = latest
-    ? new Date(latest.listenedAt.getTime() - 1000)
-    : undefined
+  const from = (await resolveSyncFrom(db)) ?? undefined
 
   const result = await fetcher.fetchPage({ page: 1, pageSize: 1, from })
 

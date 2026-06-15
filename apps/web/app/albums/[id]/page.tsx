@@ -1,13 +1,29 @@
-import { IconDisc } from "@tabler/icons-react"
-import Image from "next/image"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
 import { enrichAlbum } from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
 
+import { AlbumHeader } from "@/components/album-header"
 import { TrackTable } from "@/components/track-table"
+
+async function loadAlbumDetail(albumId: number) {
+  const album = await getAlbumDetail(db, { albumId })
+
+  if (!album) notFound()
+  if (album.enrichedAt) return album
+
+  try {
+    await enrichAlbum(db, { albumId })
+  } catch (error) {
+    // Enrichment failed — render with hum-derived fallback. Log so a broken
+    // album stays diagnosable; structured logging is a deferred follow-up.
+    console.error(`Album enrichment failed for albumId=${albumId}:`, error)
+    return album
+  }
+
+  return (await getAlbumDetail(db, { albumId }))!
+}
 
 export default async function AlbumDetailPage(props: {
   params: Promise<{ id: string }>
@@ -17,53 +33,11 @@ export default async function AlbumDetailPage(props: {
 
   if (!Number.isFinite(albumId) || albumId < 1) notFound()
 
-  let album = await getAlbumDetail(db, { albumId })
-
-  if (!album) notFound()
-
-  if (!album.enrichedAt) {
-    try {
-      await enrichAlbum(db, { albumId })
-      album = (await getAlbumDetail(db, { albumId }))!
-    } catch (error) {
-      // Enrichment failed — render with hum-derived fallback. Surface the
-      // failure so a broken album is diagnosable (human-hum-51); a structured
-      // logger is deferred to human-hum-gz2.
-      console.error(`Album enrichment failed for albumId=${albumId}:`, error)
-    }
-  }
+  const album = await loadAlbumDetail(albumId)
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-start gap-5">
-        {album.imageUrl ? (
-          <Image
-            src={album.imageUrl}
-            alt={`${album.albumName} cover art`}
-            width={160}
-            height={160}
-            className="shrink-0 rounded-md"
-          />
-        ) : (
-          <div className="flex size-40 shrink-0 items-center justify-center rounded-md bg-muted">
-            <IconDisc className="size-12 text-muted-foreground" />
-          </div>
-        )}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold">{album.albumName}</h1>
-          <p className="text-lg text-muted-foreground">
-            <Link
-              href={`/artists/${album.artistId}`}
-              className="hover:underline"
-            >
-              {album.artistName}
-            </Link>
-          </p>
-          <p className="text-muted-foreground">
-            {album.humCount.toLocaleString()} hums
-          </p>
-        </div>
-      </div>
+      <AlbumHeader {...album} />
 
       <TrackTable
         rows={album.tracks.map((track, index) => ({

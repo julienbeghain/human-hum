@@ -39,6 +39,7 @@ Keep prose to the strict minimum — prefer self-explanatory code over comments.
 - **Design rationale → ADRs** (`docs/adr/NNNN-title.md`), not scattered notes or heavy comments
 - **Domain language → [CONTEXT.md](CONTEXT.md)**; **plans & handoffs → `agent-context/`**
 - Add a code comment only for a genuinely non-obvious *why* that renaming or restructuring can't make clear — never to narrate *what* the code does
+- Never reference tracker IDs (beads `human-hum-*`, GitHub `#NN`) in committed source — they point at trackers a reader of the public repo can't resolve and they rot. Keep the rationale in the comment; drop the ID.
 - Don't create new `.md` files under `apps/` or `packages/`
 
 ## Guidelines

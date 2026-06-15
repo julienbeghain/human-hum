@@ -1,3 +1,4 @@
+// fallow-ignore-file complexity -- vendored shadcn component
 "use client"
 
 import * as React from "react"

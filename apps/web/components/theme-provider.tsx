@@ -1,3 +1,4 @@
+// fallow-ignore-file complexity -- thin next-themes wrapper (vendored boilerplate)
 "use client"
 
 import * as React from "react"

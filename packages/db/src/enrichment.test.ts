@@ -214,7 +214,7 @@ describe("enrichAlbum", () => {
   })
 
   it("parses album.getInfo with numeric duration and rank from the real schema", async () => {
-    // Regression for human-hum-52: the album.getInfo endpoint returns duration
+    // Regression: the album.getInfo endpoint returns duration
     // and @attr.rank as JSON numbers, not strings. This drives the real Zod
     // schema via a mocked fetch — the fakeFetcher in other tests bypasses it,
     // which is why the global enrichment failure went undetected.

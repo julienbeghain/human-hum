@@ -176,38 +176,25 @@ export async function importHums(
   fetcher: SourceFetcher,
   options: ImportOptions
 ): Promise<ImportResult> {
-  const { backfill, onProgress } = options
+  const { onProgress } = options
   let { from, to } = options
+  let backfill = options.backfill ?? false
 
-  // Incremental sync: auto-detect `from` unless backfill or explicit `from`
-  const paginate = backfill ?? false
+  // Incremental sync: start just after the latest stored hum. An empty DB has
+  // nothing to sync from, so fall back to a full backfill instead.
   if (!backfill && !from) {
-    const { rows } = await getHums(db, { pageSize: 1 })
-    const latest = rows[0]
-    if (latest) {
-      // 1-second overlap — dedup via unique constraint handles duplicates
-      from = new Date(latest.listenedAt.getTime() - 1000)
-    } else {
-      // Empty DB — fall back to full backfill behavior
-      return importHums(db, fetcher, { ...options, backfill: true })
-    }
+    const syncFrom = await resolveSyncFrom(db)
+    if (syncFrom) from = syncFrom
+    else backfill = true
   }
 
-  // Backfill resume: if backfilling with existing data and no explicit `to`,
-  // set to = MIN(listened_at) + 1s so we only fetch pages older than what we have
+  // Backfill resume: only fetch pages older than what we already have.
   if (backfill && !to) {
-    const { rows: earliestRows } = await getHums(db, {
-      pageSize: 1,
-      orderAsc: true,
-    })
-    const earliest = earliestRows[0]
-    if (earliest) {
-      to = new Date(earliest.listenedAt.getTime() + 1000)
-    }
+    to = await resolveBackfillTo(db)
   }
 
-  // Backfill and incremental sync both paginate at 200/page
-  const pageSize = paginate || from ? 200 : 50
+  // Backfill and incremental sync both paginate at 200/page.
+  const pageSize = backfill || from ? 200 : 50
 
   let totalImported = 0
   let totalSkipped = 0
@@ -224,25 +211,13 @@ export async function importHums(
     })
 
     totalPages = result.totalPages
-    let pageImported = 0
-    let pageSkipped = result.skippedCount
+    const { imported, skipped } = await recordPage(db, result)
 
-    for (const listen of result.listens) {
-      const recorded = await recordListen(db, listen)
-      if (recorded.wasNew) pageImported++
-      else pageSkipped++
-    }
-
-    totalImported += pageImported
-    totalSkipped += pageSkipped
+    totalImported += imported
+    totalSkipped += skipped
     pagesProcessed++
 
-    onProgress?.({
-      page: currentPage,
-      totalPages,
-      imported: pageImported,
-      skipped: pageSkipped,
-    })
+    onProgress?.({ page: currentPage, totalPages, imported, skipped })
 
     currentPage++
 
@@ -261,6 +236,47 @@ export async function importHums(
 }
 
 // --- Helpers ---
+
+/**
+ * Persist one fetched page's listens, tallying new imports vs. duplicates. The
+ * page's pre-counted `skippedCount` (e.g. now-playing entries) seeds the skip
+ * total; duplicates rejected by the unique constraint add to it.
+ */
+async function recordPage(
+  db: Database,
+  result: FetchPageResult
+): Promise<{ imported: number; skipped: number }> {
+  let imported = 0
+  let skipped = result.skippedCount
+  for (const listen of result.listens) {
+    const recorded = await recordListen(db, listen)
+    if (recorded.wasNew) imported++
+    else skipped++
+  }
+  return { imported, skipped }
+}
+
+/**
+ * Incremental-sync lower bound: 1 second before the latest stored hum (the
+ * overlap is deduped by the unique constraint). Returns null on an empty DB,
+ * signalling the caller to fall back to a full backfill.
+ */
+async function resolveSyncFrom(db: Database): Promise<Date | null> {
+  const { rows } = await getHums(db, { pageSize: 1 })
+  const latest = rows[0]
+  return latest ? new Date(latest.listenedAt.getTime() - 1000) : null
+}
+
+/**
+ * Backfill-resume upper bound: 1 second after the earliest stored hum, so we
+ * only fetch pages older than what we already have. Returns undefined when the
+ * DB is empty (nothing to resume past — fetch from the start).
+ */
+async function resolveBackfillTo(db: Database): Promise<Date | undefined> {
+  const { rows } = await getHums(db, { pageSize: 1, orderAsc: true })
+  const earliest = rows[0]
+  return earliest ? new Date(earliest.listenedAt.getTime() + 1000) : undefined
+}
 
 async function checkCompleteness(
   db: Database,

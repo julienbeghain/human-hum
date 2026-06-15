@@ -125,18 +125,23 @@ export async function enrichAlbum(
     .from(schema.artists)
     .where(eq(schema.artists.id, album.artistId))
 
+  if (!artist) {
+    throw new Error(`Artist not found: ${album.artistId}`)
+  }
+
   const result = await fetcher.getAlbumInfo({
     albumName: album.name,
-    artistName: artist!.name,
+    artistName: artist.name,
   })
 
-  await db
-    .update(schema.albums)
-    .set({
-      imageUrl: result.imageUrl,
-      enrichedAt: new Date(),
-    })
-    .where(eq(schema.albums.id, albumId))
+  // Ordered, not transactional: the neon-http driver has no interactive
+  // transactions, so we write so that enriched_at — the completion marker —
+  // commits last, only after the tracklist is durable. A failure before it
+  // leaves enriched_at null and the album page's on-visit gate retries. The
+  // delete makes the track write idempotent so a retry after a partial run
+  // heals instead of colliding on the (album_id, track_number) PK. This path
+  // is short-lived: TIDAL is expected to supersede Last.fm enrichment.
+  await db.delete(schema.albumTracks).where(eq(schema.albumTracks.albumId, albumId))
 
   if (result.tracks.length > 0) {
     const artistTracks = await db
@@ -161,4 +166,12 @@ export async function enrichAlbum(
 
     await db.insert(schema.albumTracks).values(trackRows)
   }
+
+  await db
+    .update(schema.albums)
+    .set({
+      imageUrl: result.imageUrl,
+      enrichedAt: new Date(),
+    })
+    .where(eq(schema.albums.id, albumId))
 }

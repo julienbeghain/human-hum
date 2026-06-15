@@ -21,14 +21,15 @@ A personal listening-history platform that records what a user listens to across
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
-| **Source** | The service a hum originated from (`lastfm`, `spotify`, `tidal`) | Provider, platform, origin |
+| **Source** (hum source) | The service a hum originated from (`lastfm`, `spotify`, `tidal`) — the value of the `source` column on hums. A *role* a service plays, distinct from enrichment source | Provider, platform, origin |
+| **Enrichment source** | A service queried for entity metadata (artwork, tracklist, durations, links), e.g. LastFM `album.getInfo` or the TIDAL catalog. A *role* distinct from hum source — a service may be one, the other, or both: TIDAL is enrichment-only (catalog reads, no login), LastFM is currently both | Metadata provider |
 | **Import** | A one-time bulk operation that loads historical hums from a source into the database | Migration, backfill, seed |
 | **Sync** | An incremental fetch of only new hums since the last known `listened_at` | Refresh, update, poll (poll is reserved for Spotify) |
 | **Poll** | A recurring, cron-triggered fetch of recently-played tracks from Spotify's API | Cron job, background sync |
 | **Upsert** | An insert that silently skips if a matching row already exists (deduplication) | Insert-or-ignore, merge |
 | **Cross-source deduplication** | The process of detecting the same listening event reported by multiple sources within a ~30-second window | Dedup, reconciliation |
 | **Now playing** | A LastFM API entry with no timestamp, indicating a track currently being listened to. Skipped during import (no timestamp to record), but displayed in the Now Playing banner | Currently playing, live track |
-| **Enrichment** | A one-time per-entity fetch of metadata (artwork, tracklist, duration) from an external API (e.g. LastFM `album.getInfo`). Triggered on-demand when a user visits an un-enriched entity page. Distinct from import/sync which deal with hums, not entity metadata | Metadata fetch, backfill (reserved for hum import) |
+| **Enrichment** | A per-source fetch of supplementary entity metadata (artwork, tracklist, durations, external links) from an external API (e.g. LastFM `album.getInfo`, later TIDAL). **Multi-source and multi-grain** — a source may enrich an album and/or its tracks. Attempted on demand when a user visits an entity still un-enriched *by that source*, and retried until it succeeds. Distinct from import/sync, which deal with hums, not entity metadata | Metadata fetch, backfill (reserved for hum import) |
 
 ### Schema
 

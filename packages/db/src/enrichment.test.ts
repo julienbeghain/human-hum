@@ -173,6 +173,100 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
+  it("leaves enriched_at null and writes no tracks if the track insert fails", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+
+    const r = await recordListen(freshDb, {
+      artist: { name: "Squarepusher" },
+      track: { name: "Tommib" },
+      album: { name: "Go Plastic" },
+      listenedAt: new Date("2024-09-01T10:00:00Z"),
+      source: "lastfm",
+    })
+    const freshAlbumId = r.albumId!
+
+    // Two tracks share trackNumber 1 -> violates album_tracks PK
+    // (album_id, track_number) on insert.
+    const fetcher = fakeFetcher({
+      imageUrl: "https://example.com/go-plastic.jpg",
+      tracks: [
+        { name: "My Red Hot Car", trackNumber: 1, duration: 295 },
+        { name: "Boneville Occident", trackNumber: 1, duration: 222 },
+      ],
+    })
+
+    await expect(
+      enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
+    ).rejects.toThrow()
+
+    const [album] = await freshDb
+      .select({ enrichedAt: albums.enrichedAt })
+      .from(albums)
+      .where(eq(albums.id, freshAlbumId))
+
+    expect(album!.enrichedAt).toBeNull()
+
+    const trackRows = await freshDb
+      .select()
+      .from(albumTracks)
+      .where(eq(albumTracks.albumId, freshAlbumId))
+
+    expect(trackRows).toHaveLength(0)
+
+    await freshClient.close()
+  })
+
+  it("heals an album left with stale tracks and no enriched_at marker on retry", async () => {
+    const { db: freshDb, client: freshClient } = await setupTestDb()
+
+    const r = await recordListen(freshDb, {
+      artist: { name: "Plaid" },
+      track: { name: "Eyen" },
+      album: { name: "Double Figure" },
+      listenedAt: new Date("2024-10-01T10:00:00Z"),
+      source: "lastfm",
+    })
+    const freshAlbumId = r.albumId!
+
+    // Simulate an interrupted prior enrichment: tracks were written but the
+    // enriched_at update never committed (separate neon-http round-trip). The
+    // album page gate sees null enriched_at and retries.
+    await freshDb.insert(albumTracks).values({
+      albumId: freshAlbumId,
+      trackNumber: 1,
+      name: "Stale Row",
+      trackId: null,
+      duration: null,
+    })
+
+    const fetcher = fakeFetcher({
+      imageUrl: "https://example.com/double-figure.jpg",
+      tracks: [
+        { name: "Eyen", trackNumber: 1, duration: 268 },
+        { name: "Squance", trackNumber: 2, duration: 312 },
+      ],
+    })
+
+    await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
+
+    const [album] = await freshDb
+      .select({ enrichedAt: albums.enrichedAt })
+      .from(albums)
+      .where(eq(albums.id, freshAlbumId))
+
+    expect(album!.enrichedAt).toBeInstanceOf(Date)
+
+    const trackRows = await freshDb
+      .select({ name: albumTracks.name, trackNumber: albumTracks.trackNumber })
+      .from(albumTracks)
+      .where(eq(albumTracks.albumId, freshAlbumId))
+
+    expect(trackRows).toHaveLength(2)
+    expect(trackRows.map((t) => t.name).sort()).toEqual(["Eyen", "Squance"])
+
+    await freshClient.close()
+  })
+
   it("sets enriched_at but leaves image_url null when no artwork", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 

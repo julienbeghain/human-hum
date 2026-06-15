@@ -1,3 +1,26 @@
+export interface PageResolution {
+  totalPages: number
+  /** The page to redirect to when `page` is past the last page, else `null`. */
+  redirectTo: number | null
+}
+
+/**
+ * Resolves a requested page against the real result size. The validator clamps
+ * only the low end, so a hand-typed `?page=9999` reaches here in range; without
+ * this the data fetch would return no rows and render a silent empty table.
+ */
+export function resolvePage(
+  page: number,
+  totalCount: number,
+  pageSize: number
+): PageResolution {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  return {
+    totalPages,
+    redirectTo: page > totalPages ? totalPages : null,
+  }
+}
+
 /**
  * Returns the page numbers to render given current page and total pages.
  * Always shows first, last, current, and one page on each side of current.

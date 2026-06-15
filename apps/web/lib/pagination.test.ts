@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getPageNumbers } from "./pagination"
+import { getPageNumbers, resolvePage } from "./pagination"
 
 describe("getPageNumbers", () => {
   it("returns every page sequentially when there are 7 or fewer", () => {
@@ -31,5 +31,32 @@ describe("getPageNumbers", () => {
   it("omits the ellipsis when the window is adjacent to an edge", () => {
     expect(getPageNumbers(2, 8)).toEqual([1, 2, 3, null, 8])
     expect(getPageNumbers(7, 8)).toEqual([1, null, 6, 7, 8])
+  })
+})
+
+describe("resolvePage", () => {
+  it("computes total pages, rounding a partial last page up", () => {
+    expect(resolvePage(1, 101, 50).totalPages).toBe(3)
+    expect(resolvePage(1, 100, 50).totalPages).toBe(2)
+  })
+
+  it("does not redirect an in-range page", () => {
+    expect(resolvePage(2, 101, 50).redirectTo).toBeNull()
+  })
+
+  it("does not redirect the last page", () => {
+    expect(resolvePage(3, 101, 50).redirectTo).toBeNull()
+  })
+
+  it("redirects an out-of-range page to the last page", () => {
+    expect(resolvePage(9999, 101, 50)).toEqual({
+      totalPages: 3,
+      redirectTo: 3,
+    })
+  })
+
+  it("reports one page and redirects past it when there is no data", () => {
+    expect(resolvePage(1, 0, 50)).toEqual({ totalPages: 1, redirectTo: null })
+    expect(resolvePage(5, 0, 50)).toEqual({ totalPages: 1, redirectTo: 1 })
   })
 })

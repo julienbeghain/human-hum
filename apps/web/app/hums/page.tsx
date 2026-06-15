@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 
 import { db } from "@workspace/db"
 import { getHums } from "@workspace/db/queries"
@@ -12,6 +13,7 @@ import {
 } from "@workspace/ui/components/table"
 
 import { HumsPagination } from "@/components/hums-pagination"
+import { resolvePage } from "@/lib/pagination"
 import { humsPageParamSchema } from "@/lib/validators/hums-page-param"
 
 const DEFAULT_PAGE_SIZE = 50
@@ -36,12 +38,18 @@ export default async function HumsPage(props: {
     pageSize: DEFAULT_PAGE_SIZE,
   })
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))
-  const clampedPage = Math.min(page, totalPages)
+  const { totalPages, redirectTo } = resolvePage(
+    page,
+    totalCount,
+    DEFAULT_PAGE_SIZE
+  )
+  if (redirectTo !== null) {
+    redirect(`/hums?page=${redirectTo}`)
+  }
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      {rows.length === 0 && clampedPage === 1 ? (
+      {rows.length === 0 ? (
         <p className="text-muted-foreground">
           No hums yet. Import some listening history first.
         </p>
@@ -96,7 +104,7 @@ export default async function HumsPage(props: {
           </Table>
 
           <HumsPagination
-            currentPage={clampedPage}
+            currentPage={page}
             totalPages={totalPages}
             totalCount={totalCount}
           />

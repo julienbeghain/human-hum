@@ -13,6 +13,8 @@ export default defineConfig({
     env: {
       DATABASE_URL: "postgres://test:test@localhost/test",
       LASTFM_API_KEY: "test-key",
+      TIDAL_CLIENT_ID: "test-client-id",
+      TIDAL_CLIENT_SECRET: "test-client-secret",
     },
   },
 })

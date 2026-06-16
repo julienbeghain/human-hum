@@ -1,0 +1,4 @@
+{
+  "min": 132,
+  "note": "Floor for total test cases across **/*.test.ts(x). Lowering this number must be a deliberate, reviewed change — never to make CI pass after deleting tests. See .sandcastle/review-prompt.md."
+}

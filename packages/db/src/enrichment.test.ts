@@ -229,8 +229,9 @@ describe("enrichAlbum", () => {
     const freshAlbumId = r.albumId!
 
     // Simulate an interrupted prior enrichment: tracks were written but the
-    // lastfm_enriched_at update never committed (separate neon-http round-trip). The
-    // album page gate sees null lastfm_enriched_at and retries.
+    // lastfm_enriched_at update never committed (separate neon-http
+    // round-trip). The album page gate sees null lastfm_enriched_at and
+    // retries.
     await freshDb.insert(albumTracks).values({
       albumId: freshAlbumId,
       trackNumber: 1,

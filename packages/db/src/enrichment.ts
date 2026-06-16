@@ -138,10 +138,10 @@ export async function enrichAlbum(
   // transactions, so we write so that lastfm_enriched_at — the completion
   // marker — commits last, only after the tracklist is durable. A failure
   // before it leaves lastfm_enriched_at null and the album page's on-visit
-  // gate retries. The
-  // delete makes the track write idempotent so a retry after a partial run
-  // heals instead of colliding on the (album_id, track_number) PK. This path
-  // is short-lived: TIDAL is expected to supersede Last.fm enrichment.
+  // gate retries. The delete makes the track write idempotent so a retry
+  // after a partial run heals instead of colliding on the (album_id,
+  // track_number) PK. This path is short-lived: TIDAL is expected to
+  // supersede Last.fm enrichment.
   await db.delete(schema.albumTracks).where(eq(schema.albumTracks.albumId, albumId))
 
   if (result.tracks.length > 0) {

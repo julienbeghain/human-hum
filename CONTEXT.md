@@ -12,7 +12,9 @@ A personal listening-history platform that records what a user listens to across
 | **Listen** | The act of playing a track, and the verb for producing a record. The system *records a listen → writes a hum*. There is no verb "to hum" | — |
 | **Track** | A specific recording identified by name and artist | Song, music |
 | **Artist** | A musical performer or group that creates tracks | Band, musician, act |
-| **Album** | A collection of tracks released together by an artist | Record, release, LP |
+| **Release** | The published product a track belongs to — the entity the `albums` table holds. Every listen comes from exactly one release; when our data lacks it, the release is *unknown*, not absent | Record, LP |
+| **Release type** | The kind of release: `album`, `single`, `EP`, or `compilation` | Format |
+| **Album** | One *type* of release — a full-length collection. **Not** a synonym for Release | Record, LP |
 | **Track number** | The 1-based position of a track within an album, as defined by the release. Lives in the `album_tracks` bridge table because the same track can appear at different positions on different albums | Track position, index, order |
 | **MusicBrainz ID (MBID)** | An external unique identifier from the MusicBrainz database, used to match entities across sources | External ID, MB ID |
 | **Listening history** | The complete ordered set of a user's hums | Play history, hum history, library |
@@ -67,8 +69,8 @@ A personal listening-history platform that records what a user listens to across
 ## Relationships
 
 - A **Hum** references exactly one **Track** and records one **Source**
-- A **Track** belongs to exactly one **Artist** and optionally one **Album**
-- An **Album** belongs to exactly one **Artist**
+- A **Track** is credited to one or more **Artists** and belongs to optionally one **Release** (absent when the release is *unknown*)
+- A **Release** is credited to one or more **Artists** (a single artist, a collaboration, or *Various Artists*) and has exactly one **Release type**
 - An **Artist**, **Album**, and **Track** may each have an optional **MBID**
 - A **Hum** is uniquely identified by its `(track_id, listened_at)` pair — this is the deduplication key
 - A **User** owns zero or more **Hums** (once auth is added)

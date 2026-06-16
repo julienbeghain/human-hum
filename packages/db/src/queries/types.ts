@@ -110,7 +110,7 @@ export type AlbumDetail = {
   artistId: number
   artistName: string
   humCount: number
-  enrichedAt: Date | null
+  lastfmEnrichedAt: Date | null
   imageUrl: string | null
   tracks: AlbumDetailTrack[]
 }

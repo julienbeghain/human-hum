@@ -18,7 +18,7 @@ export async function getAlbumDetail(
       albumName: schema.albums.name,
       artistId: schema.artists.id,
       artistName: schema.artists.name,
-      enrichedAt: schema.albums.enrichedAt,
+      lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
       imageUrl: schema.albums.imageUrl,
     })
     .from(schema.albums)
@@ -39,7 +39,7 @@ export async function getAlbumDetail(
 
   let tracks: AlbumDetailTrack[]
 
-  if (album.enrichedAt) {
+  if (album.lastfmEnrichedAt) {
     tracks = await getEnrichedTracks(db, albumId, humConditions)
   } else {
     tracks = await getHumDerivedTracks(db, humConditions)

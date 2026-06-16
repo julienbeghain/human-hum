@@ -105,7 +105,7 @@ export async function enrichAlbum(
 
   const [album] = await db
     .select({
-      enrichedAt: schema.albums.enrichedAt,
+      lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
       name: schema.albums.name,
       artistId: schema.albums.artistId,
     })
@@ -116,7 +116,7 @@ export async function enrichAlbum(
     throw new Error(`Album not found: ${albumId}`)
   }
 
-  if (album.enrichedAt) {
+  if (album.lastfmEnrichedAt) {
     return
   }
 
@@ -135,9 +135,10 @@ export async function enrichAlbum(
   })
 
   // Ordered, not transactional: the neon-http driver has no interactive
-  // transactions, so we write so that enriched_at — the completion marker —
-  // commits last, only after the tracklist is durable. A failure before it
-  // leaves enriched_at null and the album page's on-visit gate retries. The
+  // transactions, so we write so that lastfm_enriched_at — the completion
+  // marker — commits last, only after the tracklist is durable. A failure
+  // before it leaves lastfm_enriched_at null and the album page's on-visit
+  // gate retries. The
   // delete makes the track write idempotent so a retry after a partial run
   // heals instead of colliding on the (album_id, track_number) PK. This path
   // is short-lived: TIDAL is expected to supersede Last.fm enrichment.
@@ -171,7 +172,7 @@ export async function enrichAlbum(
     .update(schema.albums)
     .set({
       imageUrl: result.imageUrl,
-      enrichedAt: new Date(),
+      lastfmEnrichedAt: new Date(),
     })
     .where(eq(schema.albums.id, albumId))
 }

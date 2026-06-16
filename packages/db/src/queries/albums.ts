@@ -19,6 +19,7 @@ export async function getAlbumDetail(
       artistId: schema.artists.id,
       artistName: schema.artists.name,
       lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
+      tidalEnrichedAt: schema.albums.tidalEnrichedAt,
       imageUrl: schema.albums.imageUrl,
     })
     .from(schema.albums)

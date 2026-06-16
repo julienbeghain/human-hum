@@ -127,3 +127,66 @@ export async function searchTidalAlbums(query: string): Promise<TidalAlbum[]> {
     popularity: album.attributes.popularity,
   }))
 }
+
+// Album cover art and artist are includable relationships, not album
+// attributes: `include=coverArt,artists` embeds them in `included` as
+// `artworks` and `artists` resources. We ask for exactly those two types, so a
+// discriminated union over them is strict by construction — an unexpected type
+// throws rather than passing silently.
+const artworkFileSchema = z.object({
+  href: z.string().min(1),
+  meta: z.object({ width: z.number(), height: z.number() }),
+})
+
+const artworkResourceSchema = z.object({
+  type: z.literal("artworks"),
+  attributes: z.object({ files: z.array(artworkFileSchema) }),
+})
+
+const artistResourceSchema = z.object({
+  type: z.literal("artists"),
+  attributes: z.object({ name: z.string() }),
+})
+
+const albumDocumentSchema = z.object({
+  included: z
+    .array(z.discriminatedUnion("type", [artworkResourceSchema, artistResourceSchema]))
+    .optional(),
+})
+
+export interface TidalAlbumDetail {
+  artistName: string | null
+  coverArtUrl: string | null
+}
+
+/**
+ * Fetch a single TIDAL album's artist name and largest cover-art URL. Used to
+ * confirm an album-search candidate's artist (precision over recall) and to
+ * source the artwork. Either field is null when TIDAL omits it.
+ */
+export async function getTidalAlbum(albumId: string): Promise<TidalAlbumDetail> {
+  const url = new URL(`albums/${encodeURIComponent(albumId)}`, TIDAL_API_BASE)
+  url.searchParams.set("countryCode", COUNTRY_CODE)
+  url.searchParams.set("include", "coverArt,artists")
+
+  const document = await tidalFetch(url, albumDocumentSchema)
+  const included = document.included ?? []
+
+  const artist = included.find((r) => r.type === "artists")
+  const artwork = included.find((r) => r.type === "artworks")
+
+  const largest = artwork?.attributes.files.reduce<
+    z.infer<typeof artworkFileSchema> | undefined
+  >(
+    (best, file) =>
+      !best || file.meta.width * file.meta.height > best.meta.width * best.meta.height
+        ? file
+        : best,
+    undefined
+  )
+
+  return {
+    artistName: artist?.attributes.name ?? null,
+    coverArtUrl: largest?.href ?? null,
+  }
+}

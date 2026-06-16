@@ -1,28 +1,41 @@
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
-import { enrichAlbum } from "@workspace/db/enrichment"
+import { enrichAlbum, enrichAlbumWithTidal } from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
 
 import { AlbumHeader } from "@/components/album-header"
 import { TrackTable } from "@/components/track-table"
 
 async function loadAlbumDetail(albumId: number) {
-  const album = await getAlbumDetail(db, { albumId })
+  let album = await getAlbumDetail(db, { albumId })
 
   if (!album) notFound()
-  if (album.lastfmEnrichedAt) return album
 
-  try {
-    await enrichAlbum(db, { albumId })
-  } catch (error) {
-    // Enrichment failed — render with hum-derived fallback. Log so a broken
-    // album stays diagnosable; structured logging is a deferred follow-up.
-    console.error(`Album enrichment failed for albumId=${albumId}:`, error)
-    return album
+  // Two independent, self-gating passes — LastFM then TIDAL — each with its own
+  // try/catch so one source's failure degrades to existing data without
+  // touching the other.
+  if (!album.lastfmEnrichedAt) {
+    try {
+      await enrichAlbum(db, { albumId })
+      album = (await getAlbumDetail(db, { albumId }))!
+    } catch (error) {
+      console.error(`LastFM album enrichment failed for albumId=${albumId}:`, error)
+      return album
+    }
   }
 
-  return (await getAlbumDetail(db, { albumId }))!
+  if (album.lastfmEnrichedAt && !album.tidalEnrichedAt) {
+    try {
+      await enrichAlbumWithTidal(db, { albumId })
+      album = (await getAlbumDetail(db, { albumId }))!
+    } catch (error) {
+      console.error(`TIDAL album enrichment failed for albumId=${albumId}:`, error)
+      return album
+    }
+  }
+
+  return album
 }
 
 export default async function AlbumDetailPage(props: {

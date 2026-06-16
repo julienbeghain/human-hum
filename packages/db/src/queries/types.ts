@@ -111,6 +111,7 @@ export type AlbumDetail = {
   artistName: string
   humCount: number
   lastfmEnrichedAt: Date | null
+  tidalEnrichedAt: Date | null
   imageUrl: string | null
   tracks: AlbumDetailTrack[]
 }

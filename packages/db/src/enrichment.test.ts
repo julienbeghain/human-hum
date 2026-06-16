@@ -5,10 +5,19 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "./index"
-import type { AlbumInfoFetcher, AlbumInfoResult } from "./enrichment"
-import { enrichAlbum, LastfmAlbumInfoFetcher } from "./enrichment"
+import type {
+  AlbumInfoFetcher,
+  AlbumInfoResult,
+  TidalCatalogFetcher,
+} from "./enrichment"
+import {
+  enrichAlbum,
+  enrichAlbumWithTidal,
+  LastfmAlbumInfoFetcher,
+} from "./enrichment"
 import { recordListen } from "./ingestion"
 import { albums, albumTracks } from "./schema"
+import type { TidalAlbum, TidalAlbumDetail } from "./tidal-api"
 import { setupTestDb } from "./test-utils"
 
 let client: PGlite
@@ -387,5 +396,279 @@ describe("enrichAlbum", () => {
     expect(trackRows).toHaveLength(0)
 
     await freshClient.close()
+  })
+})
+
+const LASTFM_PLACEHOLDER =
+  "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
+
+// A LastFM-enriched album in a chosen artwork state, the starting point every
+// TIDAL artwork test shares. Returns the album id.
+async function seedLastfmEnrichedAlbum(
+  db: Database,
+  opts: {
+    artist: string
+    track: string
+    album: string
+    imageUrl: string | null
+    lastfmEnrichedAt?: Date | null
+  }
+): Promise<number> {
+  const r = await recordListen(db, {
+    artist: { name: opts.artist },
+    track: { name: opts.track },
+    album: { name: opts.album },
+    listenedAt: new Date("2024-11-01T10:00:00Z"),
+    source: "lastfm",
+  })
+  const albumId = r.albumId!
+
+  await db
+    .update(albums)
+    .set({
+      imageUrl: opts.imageUrl,
+      lastfmEnrichedAt:
+        opts.lastfmEnrichedAt === undefined ? new Date() : opts.lastfmEnrichedAt,
+    })
+    .where(eq(albums.id, albumId))
+
+  return albumId
+}
+
+// Records what the orchestrator asked the catalog so tests can assert no call
+// happened on gated paths.
+function fakeTidalFetcher(opts: {
+  candidates?: TidalAlbum[]
+  detail?: TidalAlbumDetail
+  searchError?: Error
+}): TidalCatalogFetcher & { searchCalls: number; getAlbumCalls: number } {
+  const fetcher = {
+    searchCalls: 0,
+    getAlbumCalls: 0,
+    async searchAlbums(): Promise<TidalAlbum[]> {
+      fetcher.searchCalls++
+      if (opts.searchError) throw opts.searchError
+      return opts.candidates ?? []
+    },
+    async getAlbum(): Promise<TidalAlbumDetail> {
+      fetcher.getAlbumCalls++
+      return opts.detail ?? { artistName: null, coverArtUrl: null }
+    },
+  }
+  return fetcher
+}
+
+async function readAlbum(db: Database, albumId: number) {
+  const [album] = await db
+    .select({
+      imageUrl: albums.imageUrl,
+      tidalEnrichedAt: albums.tidalEnrichedAt,
+    })
+    .from(albums)
+    .where(eq(albums.id, albumId))
+  return album!
+}
+
+describe("enrichAlbumWithTidal", () => {
+  it("fills missing artwork from TIDAL when the album and artist match", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Autechre",
+      track: "Clipper",
+      album: "Tri Repetae",
+      imageUrl: null,
+    })
+
+    const fetcher = fakeTidalFetcher({
+      candidates: [{ id: "t1", title: "Tri Repetae", popularity: 0.5 }],
+      detail: { artistName: "Autechre", coverArtUrl: "https://tidal/cover.jpg" },
+    })
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    const album = await readAlbum(db, albumId)
+    expect(album.imageUrl).toBe("https://tidal/cover.jpg")
+    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+
+    await client.close()
+  })
+
+  it("treats the LastFM star placeholder as missing and replaces it", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Boards of Canada",
+      track: "Olson",
+      album: "Geogaddi",
+      imageUrl: LASTFM_PLACEHOLDER,
+    })
+
+    const fetcher = fakeTidalFetcher({
+      candidates: [{ id: "t1", title: "Geogaddi", popularity: 0.9 }],
+      detail: {
+        artistName: "Boards of Canada",
+        coverArtUrl: "https://tidal/geogaddi.jpg",
+      },
+    })
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    expect((await readAlbum(db, albumId)).imageUrl).toBe(
+      "https://tidal/geogaddi.jpg"
+    )
+
+    await client.close()
+  })
+
+  it("never overwrites genuine LastFM artwork and skips the catalog", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Aphex Twin",
+      track: "Xtal",
+      album: "Selected Ambient Works 85-92",
+      imageUrl: "https://lastfm.example/real-cover.png",
+    })
+
+    const fetcher = fakeTidalFetcher({})
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    const album = await readAlbum(db, albumId)
+    expect(album.imageUrl).toBe("https://lastfm.example/real-cover.png")
+    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect(fetcher.searchCalls).toBe(0)
+
+    await client.close()
+  })
+
+  it("marks done without artwork when the album is not on TIDAL", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Some Obscure Act",
+      track: "Track",
+      album: "Unfindable",
+      imageUrl: null,
+    })
+
+    const fetcher = fakeTidalFetcher({ candidates: [] })
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    const album = await readAlbum(db, albumId)
+    expect(album.imageUrl).toBeNull()
+    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect(fetcher.getAlbumCalls).toBe(0)
+
+    await client.close()
+  })
+
+  it("treats a title match with a different artist as no-match", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Autechre",
+      track: "Clipper",
+      album: "Tri Repetae",
+      imageUrl: null,
+    })
+
+    // Title matches but the catalog album belongs to a different artist.
+    const fetcher = fakeTidalFetcher({
+      candidates: [{ id: "t1", title: "Tri Repetae", popularity: 0.7 }],
+      detail: { artistName: "Daniel Avery", coverArtUrl: "https://tidal/wrong.jpg" },
+    })
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    const album = await readAlbum(db, albumId)
+    expect(album.imageUrl).toBeNull()
+    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+
+    await client.close()
+  })
+
+  it("leaves artwork untouched when the matched TIDAL album has no cover", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Plaid",
+      track: "Eyen",
+      album: "Double Figure",
+      imageUrl: null,
+    })
+
+    const fetcher = fakeTidalFetcher({
+      candidates: [{ id: "t1", title: "Double Figure", popularity: 0.4 }],
+      detail: { artistName: "Plaid", coverArtUrl: null },
+    })
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    const album = await readAlbum(db, albumId)
+    expect(album.imageUrl).toBeNull()
+    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+
+    await client.close()
+  })
+
+  it("leaves tidal_enriched_at null when the catalog call fails", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Squarepusher",
+      track: "Tommib",
+      album: "Go Plastic",
+      imageUrl: null,
+    })
+
+    const fetcher = fakeTidalFetcher({
+      searchError: new Error("TIDAL API error: 429 Too Many Requests"),
+    })
+
+    await expect(
+      enrichAlbumWithTidal(db, { albumId, fetcher })
+    ).rejects.toThrow("429")
+
+    expect((await readAlbum(db, albumId)).tidalEnrichedAt).toBeNull()
+
+    await client.close()
+  })
+
+  it("defers without a catalog call when LastFM has not enriched yet", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Burial",
+      track: "Archangel",
+      album: "Untrue",
+      imageUrl: null,
+      lastfmEnrichedAt: null,
+    })
+
+    const fetcher = fakeTidalFetcher({})
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    expect((await readAlbum(db, albumId)).tidalEnrichedAt).toBeNull()
+    expect(fetcher.searchCalls).toBe(0)
+
+    await client.close()
+  })
+
+  it("returns early without a catalog call when already TIDAL-enriched", async () => {
+    const { db, client } = await setupTestDb()
+    const albumId = await seedLastfmEnrichedAlbum(db, {
+      artist: "Four Tet",
+      track: "Angel Echoes",
+      album: "There Is Love in You",
+      imageUrl: null,
+    })
+    await db
+      .update(albums)
+      .set({ tidalEnrichedAt: new Date() })
+      .where(eq(albums.id, albumId))
+
+    const fetcher = fakeTidalFetcher({})
+
+    await enrichAlbumWithTidal(db, { albumId, fetcher })
+
+    expect(fetcher.searchCalls).toBe(0)
+
+    await client.close()
   })
 })

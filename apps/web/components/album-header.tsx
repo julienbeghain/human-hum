@@ -15,6 +15,20 @@ function isTidalArtwork(imageUrl: string): boolean {
   return imageUrl.includes("resources.tidal.com")
 }
 
+// The TIDAL logo mark, at its native 24x24 proportions.
+function TidalLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      className={className}
+    >
+      <path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zM16.042 7.996l3.979-3.979L24 7.996l-3.979 3.979z" />
+    </svg>
+  )
+}
+
 export function AlbumHeader({
   imageUrl,
   albumName,
@@ -35,10 +49,10 @@ export function AlbumHeader({
           />
           {isTidalArtwork(imageUrl) && (
             <span
-              className="absolute right-1 bottom-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold tracking-widest text-white uppercase"
+              className="absolute right-1 bottom-1 flex items-center rounded bg-black/65 px-1.5 py-1"
               title="Artwork from TIDAL"
             >
-              TIDAL
+              <TidalLogo className="size-4 text-white" />
             </span>
           )}
         </div>

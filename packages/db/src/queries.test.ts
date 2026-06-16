@@ -556,3 +556,37 @@ describe("getAlbumDetail (enriched album)", () => {
     expect(album!.humCount).toBe(3)
   })
 })
+
+// --- getAlbumDetail (enriched with no tracklist) ---
+
+describe("getAlbumDetail (enriched, empty tracklist)", () => {
+  it("falls back to hum-derived tracks when enrichment produced no tracklist", async () => {
+    const { db: emptyDb, client: emptyClient } = await setupTestDb()
+
+    const r = await recordListen(emptyDb, {
+      artist: { name: "noxz" },
+      track: { name: "Dreaming Wide Awake" },
+      album: { name: "Dreaming Wide Awake" },
+      listenedAt: new Date("2024-05-01T10:00:00Z"),
+      source: "lastfm",
+    })
+    const emptyAlbumId = r.albumId!
+
+    // LastFM enriched the album but album.getInfo carried no tracklist.
+    await enrichAlbum(emptyDb, {
+      albumId: emptyAlbumId,
+      fetcher: {
+        getAlbumInfo: async () => ({
+          imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/noxz.png",
+          tracks: [],
+        }),
+      },
+    })
+
+    const album = await getAlbumDetail(emptyDb, { albumId: emptyAlbumId })
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
+    expect(album!.tracks.map((t) => t.trackName)).toEqual(["Dreaming Wide Awake"])
+
+    await emptyClient.close()
+  })
+})

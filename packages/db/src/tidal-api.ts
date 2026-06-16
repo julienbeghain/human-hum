@@ -86,7 +86,8 @@ async function tidalFetch<T>(url: URL, schema: ZodType<T>): Promise<T> {
 }
 
 // JSON:API splits linkage from resources: `include=albums` embeds the album
-// objects in `included`, so we map those rather than the id/type-only `data`.
+// objects in `included`, so we validate and map those rather than the
+// id/type-only `data` linkage, which we never read.
 const albumResourceSchema = z.object({
   id: z.string(),
   type: z.literal("albums"),
@@ -97,7 +98,6 @@ const albumResourceSchema = z.object({
 })
 
 const searchAlbumsDocumentSchema = z.object({
-  data: z.array(z.object({ id: z.string(), type: z.string() })),
   included: z.array(albumResourceSchema).optional(),
 })
 

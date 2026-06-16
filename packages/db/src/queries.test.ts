@@ -381,7 +381,7 @@ describe("getAlbumDetail", () => {
 
   it("returns tracks in play-count order with null enrichment fields when un-enriched", async () => {
     const album = await getAlbumDetail(db, { albumId: mhtrtcAlbumId })
-    expect(album!.enrichedAt).toBeNull()
+    expect(album!.lastfmEnrichedAt).toBeNull()
     expect(album!.imageUrl).toBeNull()
     expect(album!.tracks[0]!.trackNumber).toBeNull()
     expect(album!.tracks[0]!.duration).toBeNull()
@@ -505,7 +505,7 @@ describe("getAlbumDetail (enriched album)", () => {
   it("returns tracks in track-number order", async () => {
     const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
     expect(album).not.toBeNull()
-    expect(album!.enrichedAt).toBeInstanceOf(Date)
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
     expect(album!.imageUrl).toBe("https://lastfm.freetls.fastly.net/i/u/300x300/abc.png")
 
     const trackNumbers = album!.tracks.map((t) => t.trackNumber)

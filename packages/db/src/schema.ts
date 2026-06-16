@@ -41,7 +41,8 @@ export const albums = listenSchema.table(
       .notNull()
       .references(() => artists.id),
     imageUrl: text("image_url"),
-    enrichedAt: timestamp("enriched_at", { withTimezone: true }),
+    lastfmEnrichedAt: timestamp("lastfm_enriched_at", { withTimezone: true }),
+    tidalEnrichedAt: timestamp("tidal_enriched_at", { withTimezone: true }),
     ...timestampsWithoutUpdate,
   },
   (t) => [
@@ -60,6 +61,9 @@ export const albumTracks = listenSchema.table(
     name: text().notNull(),
     trackId: integer("track_id").references(() => tracks.id),
     duration: integer(),
+    tidalTrackId: text("tidal_track_id"),
+    isrc: varchar({ length: 12 }),
+    tidalLink: text("tidal_link"),
   },
   (t) => [
     primaryKey({ columns: [t.albumId, t.trackNumber] }),

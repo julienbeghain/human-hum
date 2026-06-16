@@ -43,34 +43,41 @@ describe("albums enrichment columns", () => {
     expect(row!.imageUrl).toBeNull()
   })
 
-  it("enriched_at defaults to null", async () => {
+  it("lastfm_enriched_at and tidal_enriched_at default to null", async () => {
     const [row] = await db
-      .select({ enrichedAt: albums.enrichedAt })
+      .select({
+        lastfmEnrichedAt: albums.lastfmEnrichedAt,
+        tidalEnrichedAt: albums.tidalEnrichedAt,
+      })
       .from(albums)
       .where(eq(albums.id, albumId))
 
-    expect(row!.enrichedAt).toBeNull()
+    expect(row!.lastfmEnrichedAt).toBeNull()
+    expect(row!.tidalEnrichedAt).toBeNull()
   })
 
-  it("can set image_url and enriched_at", async () => {
+  it("can set image_url and lastfm_enriched_at", async () => {
     const now = new Date()
     await db
       .update(albums)
-      .set({ imageUrl: "https://example.com/art.jpg", enrichedAt: now })
+      .set({ imageUrl: "https://example.com/art.jpg", lastfmEnrichedAt: now })
       .where(eq(albums.id, albumId))
 
     const [row] = await db
-      .select({ imageUrl: albums.imageUrl, enrichedAt: albums.enrichedAt })
+      .select({
+        imageUrl: albums.imageUrl,
+        lastfmEnrichedAt: albums.lastfmEnrichedAt,
+      })
       .from(albums)
       .where(eq(albums.id, albumId))
 
     expect(row!.imageUrl).toBe("https://example.com/art.jpg")
-    expect(row!.enrichedAt).toEqual(now)
+    expect(row!.lastfmEnrichedAt).toEqual(now)
 
     // Reset for other tests
     await db
       .update(albums)
-      .set({ imageUrl: null, enrichedAt: null })
+      .set({ imageUrl: null, lastfmEnrichedAt: null })
       .where(eq(albums.id, albumId))
   })
 })
@@ -131,6 +138,49 @@ describe("album_tracks table", () => {
       .where(eq(albumTracks.trackNumber, 3))
 
     expect(row!.duration).toBeNull()
+  })
+
+  it("tidal columns default null and accept TIDAL metadata", async () => {
+    await db.insert(albumTracks).values({
+      albumId,
+      trackNumber: 4,
+      name: "Telephasic Workshop",
+    })
+
+    const [defaults] = await db
+      .select({
+        tidalTrackId: albumTracks.tidalTrackId,
+        isrc: albumTracks.isrc,
+        tidalLink: albumTracks.tidalLink,
+      })
+      .from(albumTracks)
+      .where(eq(albumTracks.trackNumber, 4))
+
+    expect(defaults!.tidalTrackId).toBeNull()
+    expect(defaults!.isrc).toBeNull()
+    expect(defaults!.tidalLink).toBeNull()
+
+    await db
+      .update(albumTracks)
+      .set({
+        tidalTrackId: "12345678",
+        isrc: "GBAYE0000123",
+        tidalLink: "https://tidal.com/track/12345678",
+      })
+      .where(eq(albumTracks.trackNumber, 4))
+
+    const [row] = await db
+      .select({
+        tidalTrackId: albumTracks.tidalTrackId,
+        isrc: albumTracks.isrc,
+        tidalLink: albumTracks.tidalLink,
+      })
+      .from(albumTracks)
+      .where(eq(albumTracks.trackNumber, 4))
+
+    expect(row!.tidalTrackId).toBe("12345678")
+    expect(row!.isrc).toBe("GBAYE0000123")
+    expect(row!.tidalLink).toBe("https://tidal.com/track/12345678")
   })
 
   it("enforces composite PK (album_id, track_number)", async () => {

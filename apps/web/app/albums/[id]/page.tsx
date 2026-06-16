@@ -11,7 +11,7 @@ async function loadAlbumDetail(albumId: number) {
   const album = await getAlbumDetail(db, { albumId })
 
   if (!album) notFound()
-  if (album.enrichedAt) return album
+  if (album.lastfmEnrichedAt) return album
 
   try {
     await enrichAlbum(db, { albumId })

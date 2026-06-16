@@ -71,14 +71,14 @@ describe("enrichAlbum", () => {
     await enrichAlbum(db, { albumId, fetcher })
 
     const [album] = await db
-      .select({ imageUrl: albums.imageUrl, enrichedAt: albums.enrichedAt })
+      .select({ imageUrl: albums.imageUrl, lastfmEnrichedAt: albums.lastfmEnrichedAt })
       .from(albums)
       .where(eq(albums.id, albumId))
 
     expect(album!.imageUrl).toBe(
       "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png"
     )
-    expect(album!.enrichedAt).toBeInstanceOf(Date)
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
 
     const rows = await db
       .select()
@@ -138,7 +138,7 @@ describe("enrichAlbum", () => {
     expect(wildlife!.trackId).toBeNull()
   })
 
-  it("does not set enriched_at if fetcher throws", async () => {
+  it("does not set lastfm_enriched_at if fetcher throws", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -157,11 +157,11 @@ describe("enrichAlbum", () => {
     ).rejects.toThrow("503 Service Unavailable")
 
     const [album] = await freshDb
-      .select({ enrichedAt: albums.enrichedAt })
+      .select({ lastfmEnrichedAt: albums.lastfmEnrichedAt })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
-    expect(album!.enrichedAt).toBeNull()
+    expect(album!.lastfmEnrichedAt).toBeNull()
 
     const trackRows = await freshDb
       .select()
@@ -173,7 +173,7 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
-  it("leaves enriched_at null and writes no tracks if the track insert fails", async () => {
+  it("leaves lastfm_enriched_at null and writes no tracks if the track insert fails", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -200,11 +200,11 @@ describe("enrichAlbum", () => {
     ).rejects.toThrow()
 
     const [album] = await freshDb
-      .select({ enrichedAt: albums.enrichedAt })
+      .select({ lastfmEnrichedAt: albums.lastfmEnrichedAt })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
-    expect(album!.enrichedAt).toBeNull()
+    expect(album!.lastfmEnrichedAt).toBeNull()
 
     const trackRows = await freshDb
       .select()
@@ -216,7 +216,7 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
-  it("heals an album left with stale tracks and no enriched_at marker on retry", async () => {
+  it("heals an album left with stale tracks and no lastfm_enriched_at marker on retry", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -229,8 +229,9 @@ describe("enrichAlbum", () => {
     const freshAlbumId = r.albumId!
 
     // Simulate an interrupted prior enrichment: tracks were written but the
-    // enriched_at update never committed (separate neon-http round-trip). The
-    // album page gate sees null enriched_at and retries.
+    // lastfm_enriched_at update never committed (separate neon-http
+    // round-trip). The album page gate sees null lastfm_enriched_at and
+    // retries.
     await freshDb.insert(albumTracks).values({
       albumId: freshAlbumId,
       trackNumber: 1,
@@ -250,11 +251,11 @@ describe("enrichAlbum", () => {
     await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
 
     const [album] = await freshDb
-      .select({ enrichedAt: albums.enrichedAt })
+      .select({ lastfmEnrichedAt: albums.lastfmEnrichedAt })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
-    expect(album!.enrichedAt).toBeInstanceOf(Date)
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
 
     const trackRows = await freshDb
       .select({ name: albumTracks.name, trackNumber: albumTracks.trackNumber })
@@ -267,7 +268,7 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
-  it("sets enriched_at but leaves image_url null when no artwork", async () => {
+  it("sets lastfm_enriched_at but leaves image_url null when no artwork", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -290,12 +291,12 @@ describe("enrichAlbum", () => {
     await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
 
     const [album] = await freshDb
-      .select({ imageUrl: albums.imageUrl, enrichedAt: albums.enrichedAt })
+      .select({ imageUrl: albums.imageUrl, lastfmEnrichedAt: albums.lastfmEnrichedAt })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
     expect(album!.imageUrl).toBeNull()
-    expect(album!.enrichedAt).toBeInstanceOf(Date)
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
 
     const trackRows = await freshDb
       .select()
@@ -371,12 +372,12 @@ describe("enrichAlbum", () => {
     await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
 
     const [album] = await freshDb
-      .select({ imageUrl: albums.imageUrl, enrichedAt: albums.enrichedAt })
+      .select({ imageUrl: albums.imageUrl, lastfmEnrichedAt: albums.lastfmEnrichedAt })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
     expect(album!.imageUrl).toBe("https://example.com/eno.jpg")
-    expect(album!.enrichedAt).toBeInstanceOf(Date)
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
 
     const trackRows = await freshDb
       .select()

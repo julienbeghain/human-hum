@@ -47,5 +47,8 @@ npm-debug.log*
 # Agent context (handoffs, plans — local only)
 agent-context/
 
+# Local-only docs (not synced to the public repo)
+docs/roadmap.md
+
 # Graphify (knowledge-graph tooling output — regenerable, not synced)
 graphify-out/

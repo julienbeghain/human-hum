@@ -49,6 +49,7 @@ agent-context/
 
 # Local-only docs (not synced to the public repo)
 docs/roadmap.md
+docs/research/
 
 # Graphify (knowledge-graph tooling output — regenerable, not synced)
 graphify-out/

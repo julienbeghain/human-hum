@@ -12,6 +12,8 @@ A personal listening-history platform that records what a user listens to across
 | **Listen** | The act of playing a track, and the verb for producing a record. The system *records a listen → writes a hum*. There is no verb "to hum" | — |
 | **Track** | A specific recording identified by name and artist | Song, music |
 | **Artist** | A musical performer or group that creates tracks | Band, musician, act |
+| **Track artist** | An artist credited on a specific track. A track has one or more, kept in *credit order* — the first is the primary, used for the `(name, primary-artist)` identity bootstrap. Maps to ID3 `TPE1` / `ARTISTS` | Lead artist, performer |
+| **Album artist** | The artist a release is grouped under, independent of per-track credits (keeps compilations and `feat.`-heavy releases under one banner). A release has one or more. Maps to ID3 `TPE2` / `ALBUMARTISTS`. Enrichment-derived — not present in a raw listen | Release artist, main artist |
 | **Release** | The published product a track belongs to — the entity the `albums` table holds. Every listen comes from exactly one release; when our data lacks it, the release is *unknown*, not absent | Record, LP |
 | **Release type** | The kind of release: `album`, `single`, `EP`, or `compilation` | Format |
 | **Album** | One *type* of release — a full-length collection. **Not** a synonym for Release | Record, LP |
@@ -26,6 +28,9 @@ A personal listening-history platform that records what a user listens to across
 | **Source** (hum source) | The service a hum originated from (`lastfm`, `spotify`, `tidal`) — the value of the `source` column on hums. A *role* a service plays, distinct from enrichment source | Provider, platform, origin |
 | **Enrichment source** | A service queried for entity metadata (artwork, tracklist, durations, links), e.g. LastFM `album.getInfo` or the TIDAL catalog. A *role* distinct from hum source — a service may be one, the other, or both: TIDAL is enrichment-only (catalog reads, no login), LastFM is currently both | Metadata provider |
 | **Import** | A one-time bulk operation that loads historical hums from a source into the database | Migration, backfill, seed |
+| **Snapshot** | A local JSONL artifact of the ground-truth hums — what each source originally reported (track/album/artist names + mbids, ordered track artists, `listenedAt`, source), versioned by a header line. Excludes enrichment-derived data (artwork, durations, ISRC/UPC, links), which is regenerated | Dump, export, backup |
+| **Reseed** | Replaying a snapshot back into the database through bulk ingest, so a schema change costs a local reload instead of a fresh LastFM re-pull. Idempotent — re-running inserts nothing new | Restore, reimport, reload |
+| **Bulk ingest** | The batched write path (`bulkIngest`) that resolves entities and inserts hums in chunked multi-row inserts, for offline/trusted/high-volume loads. Distinct from `recordListen`, the per-row path for online/concurrent ingestion | Batch import, bulk load |
 | **Sync** | An incremental fetch of only new hums since the last known `listened_at` | Refresh, update, poll (poll is reserved for Spotify) |
 | **Poll** | A recurring, cron-triggered fetch of recently-played tracks from Spotify's API | Cron job, background sync |
 | **Upsert** | An insert that silently skips if a matching row already exists (deduplication) | Insert-or-ignore, merge |
@@ -69,8 +74,8 @@ A personal listening-history platform that records what a user listens to across
 ## Relationships
 
 - A **Hum** references exactly one **Track** and records one **Source**
-- A **Track** is credited to one or more **Artists** and belongs to optionally one **Release** (absent when the release is *unknown*)
-- A **Release** is credited to one or more **Artists** (a single artist, a collaboration, or *Various Artists*) and has exactly one **Release type**
+- A **Track** is credited to one or more **Track artists** (in credit order) and belongs to optionally one **Release** (absent when the release is *unknown*)
+- A **Release** is credited to one or more **Album artists** (a single artist, a collaboration, or *Various Artists*) and has exactly one **Release type**
 - An **Artist**, **Album**, and **Track** may each have an optional **MBID**
 - A **Hum** is uniquely identified by its `(track_id, listened_at)` pair — this is the deduplication key
 - A **User** owns zero or more **Hums** (once auth is added)

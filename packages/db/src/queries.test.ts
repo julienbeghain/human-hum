@@ -590,3 +590,116 @@ describe("getAlbumDetail (enriched, empty tracklist)", () => {
     await emptyClient.close()
   })
 })
+
+// --- getAlbumDetail (enriched with tracklist) ---
+
+describe("getAlbumDetail (enriched, full tracklist)", () => {
+  // Track numbers are deliberately out of play-count order so the assertions
+  // distinguish track_number ordering from the play-count fallback.
+  async function seedEnrichedAlbum() {
+    const { db: enrichedDb, client: enrichedClient } = await setupTestDb()
+
+    // Roygbiv: 2 hums, Aquarius: 1 hum -> play-count order is Roygbiv, Aquarius.
+    const r = await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Roygbiv" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-01T10:00:00Z"),
+      source: "lastfm",
+    })
+    const enrichedAlbumId = r.albumId!
+    await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Roygbiv" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-01T10:05:00Z"),
+      source: "lastfm",
+    })
+    await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Aquarius" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-01T11:00:00Z"),
+      source: "lastfm",
+    })
+
+    await enrichAlbum(enrichedDb, {
+      albumId: enrichedAlbumId,
+      fetcher: {
+        getAlbumInfo: async () => ({
+          imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/boc.png",
+          tracks: [
+            { name: "Wildlife Analysis", trackNumber: 1, duration: 88 },
+            { name: "Roygbiv", trackNumber: 2, duration: 172 },
+            { name: "Aquarius", trackNumber: 3, duration: 350 },
+          ],
+        }),
+      },
+    })
+
+    return { enrichedDb, enrichedClient, enrichedAlbumId }
+  }
+
+  it("returns tracks in track-number order with live hum counts", async () => {
+    const { enrichedDb, enrichedClient, enrichedAlbumId } =
+      await seedEnrichedAlbum()
+
+    const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+
+    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
+    expect(
+      album!.tracks.map((t) => ({
+        trackNumber: t.trackNumber,
+        trackName: t.trackName,
+        humCount: t.humCount,
+        duration: t.duration,
+      }))
+    ).toEqual([
+      { trackNumber: 1, trackName: "Wildlife Analysis", humCount: 0, duration: 88 },
+      { trackNumber: 2, trackName: "Roygbiv", humCount: 2, duration: 172 },
+      { trackNumber: 3, trackName: "Aquarius", humCount: 1, duration: 350 },
+    ])
+
+    await enrichedClient.close()
+  })
+
+  it("shows 0 hums for tracks the user has never listened to", async () => {
+    const { enrichedDb, enrichedClient, enrichedAlbumId } =
+      await seedEnrichedAlbum()
+
+    const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+    const wildlife = album!.tracks.find(
+      (t) => t.trackName === "Wildlife Analysis"
+    )
+
+    expect(wildlife!.trackId).toBeNull()
+    expect(wildlife!.humCount).toBe(0)
+
+    await enrichedClient.close()
+  })
+
+  it("recomputes hum counts on a new listen without re-enriching", async () => {
+    const { enrichedDb, enrichedClient, enrichedAlbumId } =
+      await seedEnrichedAlbum()
+
+    const before = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+    const enrichedAt = before!.lastfmEnrichedAt
+
+    await recordListen(enrichedDb, {
+      artist: { name: "Boards of Canada" },
+      track: { name: "Aquarius" },
+      album: { name: "Music Has the Right to Children" },
+      listenedAt: new Date("2024-05-02T09:00:00Z"),
+      source: "lastfm",
+    })
+
+    const after = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
+    const aquarius = after!.tracks.find((t) => t.trackName === "Aquarius")
+
+    expect(aquarius!.humCount).toBe(2)
+    // The enrichment marker is untouched — counts are query-time, not stored.
+    expect(after!.lastfmEnrichedAt).toEqual(enrichedAt)
+
+    await enrichedClient.close()
+  })
+})

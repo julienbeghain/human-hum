@@ -1,6 +1,6 @@
 export { getAlbumDetail } from "./albums"
 export { getArtistDetail, getArtistRankings } from "./artists"
-export { getHumById, getHums } from "./hums"
+export { exportHums, getHumById, getHums } from "./hums"
 export { getStats } from "./stats"
 export { getListeningClock, getTimeSeries } from "./time-series"
 export type {

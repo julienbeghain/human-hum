@@ -39,6 +39,9 @@ npm-debug.log*
 .dolt/
 *.db
 
+# Exported reseed snapshots (local-only ground-truth artifacts)
+snapshots/
+
 # Beads (local issue tracker — not synced via git)
 .beads/
 .beads-credential-key

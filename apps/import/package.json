@@ -8,6 +8,7 @@
     "import": "pnpm with-env tsx src/lastfm.ts",
     "import:backfill": "pnpm with-env tsx src/lastfm.ts --backfill",
     "export": "pnpm with-env tsx src/export.ts",
+    "reseed": "pnpm with-env tsx src/reseed.ts",
     "lint": "eslint",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit"

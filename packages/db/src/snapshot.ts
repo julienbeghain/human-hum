@@ -75,6 +75,13 @@ export function parse(jsonl: string): ParsedSnapshot {
   }
 
   const header = JSON.parse(lines[0]!) as WireHeader
+
+  if (header.snapshotVersion !== SNAPSHOT_VERSION) {
+    throw new Error(
+      `Unsupported snapshot version: expected ${SNAPSHOT_VERSION}, got ${header.snapshotVersion}`
+    )
+  }
+
   const records = lines.slice(1).map((line) => {
     const wire = JSON.parse(line) as WireRecord
     const record: SnapshotRecord = {
@@ -86,6 +93,12 @@ export function parse(jsonl: string): ParsedSnapshot {
     }
     return record
   })
+
+  if (records.length !== header.count) {
+    throw new Error(
+      `Snapshot record count mismatch: header says ${header.count}, found ${records.length}`
+    )
+  }
 
   return {
     header: {

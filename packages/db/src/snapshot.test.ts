@@ -92,4 +92,22 @@ describe("snapshot codec", () => {
     expect(parsed.records).toEqual([])
     expect(parsed.header.count).toBe(0)
   })
+
+  it("throws on an unsupported snapshot version", () => {
+    const jsonl = serialize(records, exportedAt)
+    const broken = jsonl.replace(
+      `"snapshotVersion":${SNAPSHOT_VERSION}`,
+      `"snapshotVersion":${SNAPSHOT_VERSION + 1}`
+    )
+
+    expect(() => parse(broken)).toThrow(/Unsupported snapshot version/)
+  })
+
+  it("throws when record count does not match the header count", () => {
+    const jsonl = serialize(records, exportedAt)
+    // Drop the last record line to simulate a truncated file.
+    const truncated = jsonl.split("\n").slice(0, -2).join("\n") + "\n"
+
+    expect(() => parse(truncated)).toThrow(/record count mismatch/)
+  })
 })

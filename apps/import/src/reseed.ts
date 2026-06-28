@@ -17,8 +17,16 @@ console.log(
   `Reseeding ${records.length} record(s) from snapshot v${header.snapshotVersion}...`
 )
 
-bulkIngest(db, records.map(listenInputFromSnapshot))
+bulkIngest(db, records.map(listenInputFromSnapshot), {
+  onProgress: (p) => {
+    const pct = Math.round((p.processedRecords / p.totalRecords) * 100)
+    process.stdout.write(
+      `\r  ${p.processedRecords}/${p.totalRecords} (${pct}%) — ${p.insertedHums} inserted, ${p.skippedHums} skipped`
+    )
+  },
+})
   .then((result) => {
+    process.stdout.write("\n")
     console.log(
       `Inserted ${result.insertedHums} new hum(s), skipped ${result.skippedHums} existing.`
     )

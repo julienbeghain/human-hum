@@ -156,6 +156,18 @@ export interface BulkIngestResult {
   skippedHums: number
 }
 
+/**
+ * Cumulative progress emitted after each chunk, suitable for a CLI indicator
+ * over a multi-minute reseed. `processedRecords` advances by the chunk size;
+ * the hum tallies are running totals matching the final `BulkIngestResult`.
+ */
+export interface BulkProgress {
+  processedRecords: number
+  totalRecords: number
+  insertedHums: number
+  skippedHums: number
+}
+
 // Postgres caps a statement at 65,535 bind parameters; the widest insert here
 // (hums, 4 columns) stays well under that at 5,000 rows.
 const DEFAULT_CHUNK_SIZE = 5000
@@ -177,17 +189,25 @@ function compositeKey(artistId: number, name: string): string {
 export async function bulkIngest(
   db: Database,
   inputs: ListenInput[],
-  options?: { chunkSize?: number }
+  options?: { chunkSize?: number; onProgress?: (progress: BulkProgress) => void }
 ): Promise<BulkIngestResult> {
   const chunkSize = options?.chunkSize ?? DEFAULT_CHUNK_SIZE
   let insertedHums = 0
   let skippedHums = 0
+  let processedRecords = 0
 
   for (let offset = 0; offset < inputs.length; offset += chunkSize) {
     const chunk = inputs.slice(offset, offset + chunkSize)
     const inserted = await ingestChunk(db, chunk)
     insertedHums += inserted
     skippedHums += chunk.length - inserted
+    processedRecords += chunk.length
+    options?.onProgress?.({
+      processedRecords,
+      totalRecords: inputs.length,
+      insertedHums,
+      skippedHums,
+    })
   }
 
   return { insertedHums, skippedHums }

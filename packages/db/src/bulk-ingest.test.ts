@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "./index"
-import { bulkIngest, type ListenInput } from "./ingestion"
+import { bulkIngest, type BulkProgress, type ListenInput } from "./ingestion"
 import * as schema from "./schema"
 import { setupTestDb } from "./test-utils"
 
@@ -143,6 +143,48 @@ describe("bulkIngest", () => {
     expect(artists?.value).toBe(3)
     expect(tracks?.value).toBe(12)
     expect(hums?.value).toBe(12)
+  })
+
+  it("reports cumulative progress after each chunk", async () => {
+    const inputs: ListenInput[] = Array.from({ length: 12 }, (_, i) => ({
+      artist: { name: `Artist ${i % 3}` },
+      album: { name: `Album ${i % 3}` },
+      track: { name: `Track ${i}` },
+      listenedAt: new Date(Date.UTC(2024, 0, 1, 0, i)),
+      source: "lastfm",
+    }))
+
+    const events: BulkProgress[] = []
+    await bulkIngest(db, inputs, {
+      chunkSize: 5,
+      onProgress: (p) => events.push({ ...p }),
+    })
+
+    expect(events.map((e) => e.processedRecords)).toEqual([5, 10, 12])
+    expect(events.at(-1)).toEqual({
+      processedRecords: 12,
+      totalRecords: 12,
+      insertedHums: 12,
+      skippedHums: 0,
+    })
+  })
+
+  it("reports skipped records in progress when re-ingesting", async () => {
+    const inputs: ListenInput[] = [radiohead, burial, aphex]
+    await bulkIngest(db, inputs)
+
+    const events: BulkProgress[] = []
+    await bulkIngest(db, inputs, {
+      chunkSize: 2,
+      onProgress: (p) => events.push({ ...p }),
+    })
+
+    expect(events.at(-1)).toEqual({
+      processedRecords: 3,
+      totalRecords: 3,
+      insertedHums: 0,
+      skippedHums: 3,
+    })
   })
 
   it("deduplicates identical hums within a single batch", async () => {

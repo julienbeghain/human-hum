@@ -110,4 +110,11 @@ describe("snapshot codec", () => {
 
     expect(() => parse(truncated)).toThrow(/record count mismatch/)
   })
+
+  it("throws on an unrecognised source value in a record", () => {
+    const jsonl = serialize(records, exportedAt)
+    const corrupted = jsonl.replace('"source":"lastfm"', '"source":"winamp"')
+
+    expect(() => parse(corrupted)).toThrow(/Invalid source/)
+  })
 })

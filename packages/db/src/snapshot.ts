@@ -1,6 +1,9 @@
 import type { Source } from "./ingestion"
+import * as schema from "./schema"
 
 export const SNAPSHOT_VERSION = 1
+
+const VALID_SOURCES = new Set<string>(schema.sourceEnum.enumValues)
 
 export interface SnapshotEntityRef {
   name: string
@@ -84,6 +87,9 @@ export function parse(jsonl: string): ParsedSnapshot {
 
   const records = lines.slice(1).map((line) => {
     const wire = JSON.parse(line) as WireRecord
+    if (!VALID_SOURCES.has(wire.source)) {
+      throw new Error(`Invalid source in snapshot record: "${wire.source}"`)
+    }
     const record: SnapshotRecord = {
       listenedAt: new Date(wire.listenedAt),
       source: wire.source,

@@ -36,6 +36,7 @@
     "./env": "./src/env.ts",
     "./schema": "./src/schema.ts",
     "./ingestion": "./src/ingestion.ts",
+    "./snapshot": "./src/snapshot.ts",
     "./queries": "./src/queries/index.ts",
     "./importers/lastfm": "./src/importers/lastfm.ts",
     "./importers/source-fetcher": "./src/importers/source-fetcher.ts",

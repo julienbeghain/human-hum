@@ -37,6 +37,39 @@ function searchAlbumsBody(albums: AlbumSeed[]): unknown {
   }
 }
 
+function albumBody(opts: {
+  artistName?: string
+  // [width, href] pairs; emitted in the given order so tests can assert
+  // largest-by-area selection regardless of array order.
+  covers?: [number, string][]
+}): unknown {
+  const included: unknown[] = []
+  if (opts.artistName !== undefined) {
+    included.push({
+      id: "artist-1",
+      type: "artists",
+      attributes: { name: opts.artistName },
+    })
+  }
+  if (opts.covers) {
+    included.push({
+      id: "artwork-1",
+      type: "artworks",
+      attributes: {
+        files: opts.covers.map(([width, href]) => ({
+          href,
+          meta: { width, height: width },
+        })),
+      },
+    })
+  }
+  return {
+    data: { id: "1", type: "albums", attributes: { title: "x" } },
+    included,
+    links: { self: "/albums/1" },
+  }
+}
+
 function okResponse(body: unknown): Response {
   return {
     ok: true,
@@ -206,5 +239,97 @@ describe("searchTidalAlbums", () => {
     const err = await searchTidalAlbums("anything").catch((e: unknown) => e)
     expect(err).toBeInstanceOf(TidalApiError)
     expect((err as InstanceType<typeof TidalApiError>).status).toBe(429)
+  })
+})
+
+describe("getTidalAlbum", () => {
+  it("requests the album with coverArt + artists includes and a bearer token", async () => {
+    const fetchMock = stubFetch(
+      okResponse(tokenBody()),
+      okResponse(albumBody({ artistName: "Autechre", covers: [[320, "s.jpg"]] }))
+    )
+    const { getTidalAlbum } = await loadTidal()
+
+    await getTidalAlbum("153295856")
+
+    const [url, init] = fetchMock.mock.calls[1]!
+    const requested = String(url)
+    expect(requested).toContain("/albums/153295856")
+    expect(requested).toContain("countryCode=GB")
+    expect(requested).toContain("include=coverArt%2Cartists")
+    expect(init.headers.Authorization).toBe("Bearer tok-123")
+  })
+
+  it("returns the artist name and the largest cover by area", async () => {
+    stubFetch(
+      okResponse(tokenBody()),
+      okResponse(
+        albumBody({
+          artistName: "Autechre",
+          covers: [
+            [320, "small.jpg"],
+            [1280, "large.jpg"],
+            [640, "medium.jpg"],
+          ],
+        })
+      )
+    )
+    const { getTidalAlbum } = await loadTidal()
+
+    expect(await getTidalAlbum("1")).toEqual({
+      artistName: "Autechre",
+      coverArtUrl: "large.jpg",
+    })
+  })
+
+  it("returns a null cover when the album has no artwork", async () => {
+    stubFetch(
+      okResponse(tokenBody()),
+      okResponse(albumBody({ artistName: "Autechre" }))
+    )
+    const { getTidalAlbum } = await loadTidal()
+
+    expect(await getTidalAlbum("1")).toEqual({
+      artistName: "Autechre",
+      coverArtUrl: null,
+    })
+  })
+
+  it("returns a null artist when the album omits one", async () => {
+    stubFetch(
+      okResponse(tokenBody()),
+      okResponse(albumBody({ covers: [[640, "c.jpg"]] }))
+    )
+    const { getTidalAlbum } = await loadTidal()
+
+    expect(await getTidalAlbum("1")).toEqual({
+      artistName: null,
+      coverArtUrl: "c.jpg",
+    })
+  })
+
+  it("throws when an artwork file is missing its dimensions (real zod parse)", async () => {
+    stubFetch(
+      okResponse(tokenBody()),
+      okResponse({
+        data: { id: "1", type: "albums" },
+        included: [
+          { id: "a", type: "artworks", attributes: { files: [{ href: "c.jpg" }] } },
+        ],
+        links: { self: "/albums/1" },
+      })
+    )
+    const { getTidalAlbum } = await loadTidal()
+
+    await expect(getTidalAlbum("1")).rejects.toThrow()
+  })
+
+  it("throws a status-carrying TidalApiError on a non-OK response", async () => {
+    stubFetch(okResponse(tokenBody()), errorResponse(404, "Not Found"))
+    const { getTidalAlbum, TidalApiError } = await loadTidal()
+
+    const err = await getTidalAlbum("1").catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(TidalApiError)
+    expect((err as InstanceType<typeof TidalApiError>).status).toBe(404)
   })
 })

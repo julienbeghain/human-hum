@@ -19,6 +19,7 @@ export async function getAlbumDetail(
       artistId: schema.artists.id,
       artistName: schema.artists.name,
       lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
+      tidalEnrichedAt: schema.albums.tidalEnrichedAt,
       imageUrl: schema.albums.imageUrl,
     })
     .from(schema.albums)
@@ -37,11 +38,16 @@ export async function getAlbumDetail(
 
   const humCount = humCountResult[0]?.humCount ?? 0
 
-  let tracks: AlbumDetailTrack[]
+  let tracks: AlbumDetailTrack[] = []
 
   if (album.lastfmEnrichedAt) {
     tracks = await getEnrichedTracks(db, albumId, humConditions)
-  } else {
+  }
+
+  // Fall back to hum-derived tracks when enrichment produced no tracklist (a
+  // LastFM album with no album.getInfo tracks), so an enriched album never
+  // renders worse than before it was enriched.
+  if (tracks.length === 0) {
     tracks = await getHumDerivedTracks(db, humConditions)
   }
 

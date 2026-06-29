@@ -8,6 +8,11 @@ const nextConfig = {
         hostname: "lastfm.freetls.fastly.net",
         pathname: "/i/u/**",
       },
+      {
+        protocol: "https",
+        hostname: "resources.tidal.com",
+        pathname: "/images/**",
+      },
     ],
   },
 }

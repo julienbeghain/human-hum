@@ -12,7 +12,8 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@t3-oss/env-nextjs": "^0.13.11",
@@ -37,6 +38,7 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "@vitest/coverage-v8": "^4.1.0"
   }
 }

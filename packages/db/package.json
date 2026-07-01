@@ -8,6 +8,7 @@
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "with-env": "dotenv -e ../../.env --",
     "db:generate": "pnpm with-env drizzle-kit generate",
     "db:migrate": "pnpm with-env drizzle-kit migrate",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.4.1",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^4.1.0",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
     "dotenv-cli": "^11.0.0",

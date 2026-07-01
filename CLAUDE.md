@@ -23,14 +23,24 @@ A personal listening-history platform — records what you listen to and surface
 
 - Run `pnpm typecheck && pnpm lint` before every commit
 - One Beads task per context window — see [Agent Workflow](.claude/agent-workflow.md)
+- **Every dependency is permanent code you don't control.** Before adding one, check whether the project or the standard library already does it (e.g. `crypto.randomUUID()` over a `uuid` package). When you do add one, say why — don't smuggle the choice into `package.json`.
+
+## Verification
+
+- **Test behavior that can break, not that a constructor sets a field.** If something is hard to test, that's information about the design, not permission to skip it.
+- **When fixing a bug, write the failing test first**, watch it fail, then fix it — that's the proof you fixed the cause and not the symptom.
 
 ## Working Style
 
+- **Read before you write** — read (don't skim) the files you're about to touch; copy the patterns that already exist and check imports for what the project actually depends on. Don't reach for `axios` where everything is `fetch`.
 - **Surgical edits** — change only what the task requires; don't touch unrelated code or rename incidentally.
 - **No speculative abstractions** — build for the requirement in front of you, not a hypothetical future. Prefer the simple solution. When depth *is* warranted, see [Deep Module Principles](.claude/deep-modules.md).
-- **Fix causes, not symptoms** — never hide or suppress errors with weak workarounds.
+- **Fix causes, not symptoms** — reproduce the failure before changing anything, read the whole error and stack trace, change one thing at a time. Don't paper over an unexpected `null` with a null check — find out why it's null. Never hide or suppress errors with weak workarounds.
+- **State the success criterion first** — before writing code, name what "done" means. "Add validation" becomes "reject a missing or malformed email, return 400, test both cases."
 - **Plan before multi-step work** — break it into sequential steps and capture the plan in the Beads task before implementing.
-- **Surface ambiguity, don't guess** — when a requirement is genuinely unclear, file it (`bd create`) or flag it for a human (`bd human <id>`) rather than inventing an answer.
+- **Surface ambiguity, don't guess** — when a requirement is genuinely unclear, file it (`bd create`) or flag it for a human (`bd human <id>`) rather than inventing an answer. Be precise about uncertainty: say what to verify, not "I think this should work."
+
+For the underlying discipline behind these (and the named failure modes — Kitchen Sink, Wrong Abstraction, Optimistic Path, Runaway Refactor), the `andrej-karpathy-skills:karpathy-guidelines` skill is the reference.
 
 ## Documentation Discipline
 

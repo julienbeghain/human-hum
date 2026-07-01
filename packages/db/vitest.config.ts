@@ -16,5 +16,13 @@ export default defineConfig({
       TIDAL_CLIENT_ID: "test-client-id",
       TIDAL_CLIENT_SECRET: "test-client-secret",
     },
+    coverage: {
+      provider: "v8",
+      // `json` emits coverage-final.json in Istanbul format, which fallow reads
+      // via `fallow health --coverage` to replace estimated CRAP with measured.
+      reporter: ["text", "json"],
+      include: ["src/**/*.ts"],
+      exclude: ["src/**/*.test.ts"],
+    },
   },
 })

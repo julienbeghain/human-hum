@@ -104,5 +104,3 @@ meaningful.
   writes are different auth surfaces; do not merge them.
 - `countryCode` is hardcoded `GB` today and is the documented seam for per-user market scoping
   when auth lands.
-</content>
-</invoke>

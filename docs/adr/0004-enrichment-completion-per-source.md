@@ -4,6 +4,8 @@
 
 Accepted — 2026-06-15
 
+> **Forward note (2026-07-01):** Superseded on the concrete column shape by [ADR-0005](0005-tidal-catalog-enrichment-source.md), which built TIDAL as the second album-enriching source. The per-`(entity, source)` completion model below stands, but `listen.albums.enriched_at` was renamed to **`lastfm_enriched_at`** and a second column **`tidal_enriched_at`** was added (two columns, not a completion table). Read every "`enriched_at`" below as "`lastfm_enriched_at`". This record is left otherwise unchanged.
+
 ## Context
 
 Enrichment fetches supplementary metadata for an entity from an external API. Today there is exactly one enrichment source — LastFM `album.getInfo`, which enriches an **album** with artwork and its tracklist — and a single nullable `listen.albums.enriched_at` timestamp records that it ran. The on-visit gate in the album detail page reads that column as "already enriched, do not enrich again."

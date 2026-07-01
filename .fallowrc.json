@@ -1,7 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "health": {
-    "coverage": "packages/db/coverage/coverage-final.json"
+    "coverage": "coverage/coverage-final.json",
+    "ignore": [
+      "scripts/**"
+    ]
   },
   "duplicates": {
     "ignore": [

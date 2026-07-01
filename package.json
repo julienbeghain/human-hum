@@ -10,7 +10,7 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:count": "node scripts/check-test-count.mjs",
-    "fallow:health": "pnpm --filter @workspace/db test:coverage && fallow health",
+    "fallow:health": "pnpm --filter @workspace/db test:coverage && pnpm --filter web test:coverage && node scripts/merge-coverage.mjs && fallow health",
     "db:push": "pnpm --filter @workspace/db db:push",
     "db:generate": "pnpm --filter @workspace/db db:generate",
     "db:migrate": "pnpm --filter @workspace/db db:migrate",

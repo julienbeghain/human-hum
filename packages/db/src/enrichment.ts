@@ -100,6 +100,22 @@ function createDefaultFetcher(): AlbumInfoFetcher {
   return new LastfmAlbumInfoFetcher(env.LASTFM_API_KEY)
 }
 
+async function requireArtistName(
+  db: Database,
+  artistId: number
+): Promise<string> {
+  const [artist] = await db
+    .select({ name: schema.artists.name })
+    .from(schema.artists)
+    .where(eq(schema.artists.id, artistId))
+
+  if (!artist) {
+    throw new Error(`Artist not found: ${artistId}`)
+  }
+
+  return artist.name
+}
+
 export async function enrichAlbum(
   db: Database,
   opts: { albumId: number; fetcher?: AlbumInfoFetcher }
@@ -126,18 +142,11 @@ export async function enrichAlbum(
     return
   }
 
-  const [artist] = await db
-    .select({ name: schema.artists.name })
-    .from(schema.artists)
-    .where(eq(schema.artists.id, album.artistId))
-
-  if (!artist) {
-    throw new Error(`Artist not found: ${album.artistId}`)
-  }
+  const artistName = await requireArtistName(db, album.artistId)
 
   const result = await fetcher.getAlbumInfo({
     albumName: album.name,
-    artistName: artist.name,
+    artistName,
   })
 
   // Ordered, not transactional: the neon-http driver has no interactive
@@ -287,18 +296,11 @@ export async function enrichAlbumWithTidal(
     return
   }
 
-  const [artist] = await db
-    .select({ name: schema.artists.name })
-    .from(schema.artists)
-    .where(eq(schema.artists.id, album.artistId))
-
-  if (!artist) {
-    throw new Error(`Artist not found: ${album.artistId}`)
-  }
+  const artistName = await requireArtistName(db, album.artistId)
 
   const coverArtUrl = await findTidalCoverArt(fetcher, {
     name: album.name,
-    artistName: artist.name,
+    artistName,
   })
 
   await writeTidalEnrichment(db, albumId, coverArtUrl)

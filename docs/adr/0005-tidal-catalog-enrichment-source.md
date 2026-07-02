@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted — 2026-06-15
+Accepted — 2026-06-15 · **Superseded 2026-07-02** — [ADR-0008](0008-platform-agnosticism-system-of-record.md)
+inverts TIDAL's role from *supplemental* to *preferred* (LastFM becomes the fallback floor), and
+[ADR-0009](0009-cross-platform-link-aggregation.md) replaces the single per-edition `tidal_link` with a
+recording-grain, per-platform link store. The catalog-only auth split and precision-over-recall matching
+below still stand.
 
 ## Context
 

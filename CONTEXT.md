@@ -18,7 +18,10 @@ A personal listening-history platform that records what a user listens to across
 | **Release type** | The kind of release: `album`, `single`, `EP`, or `compilation` | Format |
 | **Album** | One *type* of release — a full-length collection. **Not** a synonym for Release | Record, LP |
 | **Track number** | The 1-based position of a track within an album, as defined by the release. Lives in the `album_tracks` bridge table because the same track can appear at different positions on different albums | Track position, index, order |
-| **MusicBrainz ID (MBID)** | An external unique identifier from the MusicBrainz database, used to match entities across sources | External ID, MB ID |
+| **MusicBrainz ID (MBID)** | An external identifier from MusicBrainz. A **non-authoritative hint only** — LastFM-sourced and unreliable, never an identity or credit-resolution key | External ID, MB ID |
+| **ISRC** | International Standard Recording Code (ISO 3901) — identifies a *recording*. The identity/join key for a Track *when present*; never required. Canonical home is `tracks` | International Standard Recording Code |
+| **UPC** | The barcode (UPC/EAN/GTIN) identifying a *release* product. The identity/join key for a Release *when present*; never required. Lives on `albums` | Barcode, EAN, GTIN, barcodeId |
+| **Credit order** | The 0-based position of an artist in a track's or release's ordered credit list, mirroring the source array. Position 0 is the primary/lead, cached on the scalar `artist_id` | Sequence, billing order |
 | **Listening history** | The complete ordered set of a user's hums | Play history, hum history, library |
 
 ### Data ingestion
@@ -26,7 +29,8 @@ A personal listening-history platform that records what a user listens to across
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
 | **Source** (hum source) | The service a hum originated from (`lastfm`, `spotify`, `tidal`) — the value of the `source` column on hums. A *role* a service plays, distinct from enrichment source | Provider, platform, origin |
-| **Enrichment source** | A service queried for entity metadata (artwork, tracklist, durations, links), e.g. LastFM `album.getInfo` or the TIDAL catalog. A *role* distinct from hum source — a service may be one, the other, or both: TIDAL is enrichment-only (catalog reads, no login), LastFM is currently both | Metadata provider |
+| **Enrichment source** | A service queried for entity metadata (artwork, tracklist, durations, links), e.g. the TIDAL catalog or LastFM `album.getInfo`. A *role* distinct from hum source — a service may be one, the other, or both. Display metadata comes from a **priority ladder** (TIDAL preferred → future catalog source → LastFM floor); the winning source is recorded per album for UI provenance | Metadata provider |
+| **Platform link** | A shareable URL for a recording on one streaming platform. Human Hum stores the full *set* across platforms (resolved by ISRC) so a user shares once and the recipient opens it on their own platform | Share link, smart URL |
 | **Import** | A one-time bulk operation that loads historical hums from a source into the database | Migration, backfill, seed |
 | **Snapshot** | A local JSONL artifact of the ground-truth hums — what each source originally reported (track/album/artist names + mbids, ordered track artists, `listenedAt`, source), versioned by a header line. Excludes enrichment-derived data (artwork, durations, ISRC/UPC, links), which is regenerated | Dump, export, backup |
 | **Reseed** | Replaying a snapshot back into the database through bulk ingest, so a schema change costs a local reload instead of a fresh LastFM re-pull. Idempotent — re-running inserts nothing new | Restore, reimport, reload |

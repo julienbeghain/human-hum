@@ -5,6 +5,8 @@
 Accepted — 2026-06-15
 
 > **Forward note (2026-07-01):** Superseded on the concrete column shape by [ADR-0005](0005-tidal-catalog-enrichment-source.md), which built TIDAL as the second album-enriching source. The per-`(entity, source)` completion model below stands, but `listen.albums.enriched_at` was renamed to **`lastfm_enriched_at`** and a second column **`tidal_enriched_at`** was added (two columns, not a completion table). Read every "`enriched_at`" below as "`lastfm_enriched_at`". This record is left otherwise unchanged.
+>
+> **Forward note (2026-07-02):** The per-`(entity, source)` completion *model* here is **reaffirmed** by [ADR-0008](0008-platform-agnosticism-system-of-record.md), but its *representation* has changed: the deferral set below ("two columns beat a completion table at two sources; the table stays deferred until a third album-enriching source exists") has **triggered**. With TIDAL + LastFM + Deezer + Apple Music confirmed, ADR-0008 replaces the per-source marker *columns* with the normalized **`album_sources`** table this ADR deferred. Read the column-shape guidance below as historical; the `(entity, source)` model it protects is intact.
 
 ## Context
 

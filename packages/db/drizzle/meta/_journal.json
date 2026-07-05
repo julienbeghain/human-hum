@@ -15,6 +15,13 @@
       "when": 1781600066752,
       "tag": "0001_tidal_enrichment_markers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783641600000,
+      "tag": "0002_album_sources",
+      "breakpoints": true
     }
   ]
 }

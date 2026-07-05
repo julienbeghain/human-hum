@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 vi.setConfig({ hookTimeout: 30_000 })
@@ -8,15 +8,17 @@ import type { Database } from "./index"
 import type {
   AlbumInfoFetcher,
   AlbumInfoResult,
+  EnrichmentSource,
   TidalCatalogFetcher,
 } from "./enrichment"
 import {
   enrichAlbum,
-  enrichAlbumWithTidal,
   LastfmAlbumInfoFetcher,
+  LastfmEnrichmentSource,
+  TidalEnrichmentSource,
 } from "./enrichment"
 import { recordListen } from "./ingestion"
-import { albums, albumTracks } from "./schema"
+import { albums, albumSources, albumTracks } from "./schema"
 import type { TidalAlbum, TidalAlbumDetail } from "./tidal-api"
 import { setupTestDb } from "./test-utils"
 
@@ -66,28 +68,44 @@ function failingFetcher(error: Error): AlbumInfoFetcher {
   }
 }
 
-describe("enrichAlbum", () => {
-  it("writes artwork and tracks on successful enrichment", async () => {
-    const fetcher = fakeFetcher({
-      imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png",
-      tracks: [
-        { name: "Wildlife Analysis", trackNumber: 1, duration: 373 },
-        { name: "An Eagle in Your Mind", trackNumber: 2, duration: 393 },
-        { name: "Roygbiv", trackNumber: 3, duration: 172 },
-      ],
-    })
+function lastfmSource(fetcher: AlbumInfoFetcher): EnrichmentSource {
+  return new LastfmEnrichmentSource(fetcher)
+}
 
-    await enrichAlbum(db, { albumId, fetcher })
+async function readSourceRows(db: Database, albumId: number) {
+  return db
+    .select()
+    .from(albumSources)
+    .where(eq(albumSources.albumId, albumId))
+}
+
+describe("LastfmEnrichmentSource via enrichAlbum", () => {
+  it("writes artwork and tracks, and a matched lastfm source row", async () => {
+    const source = lastfmSource(
+      fakeFetcher({
+        imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png",
+        tracks: [
+          { name: "Wildlife Analysis", trackNumber: 1, duration: 373 },
+          { name: "An Eagle in Your Mind", trackNumber: 2, duration: 393 },
+          { name: "Roygbiv", trackNumber: 3, duration: 172 },
+        ],
+      })
+    )
+
+    await enrichAlbum(db, { albumId, sources: [source] })
 
     const [album] = await db
-      .select({ imageUrl: albums.imageUrl, lastfmEnrichedAt: albums.lastfmEnrichedAt })
+      .select({ imageUrl: albums.imageUrl })
       .from(albums)
       .where(eq(albums.id, albumId))
 
     expect(album!.imageUrl).toBe(
       "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png"
     )
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
+
+    const [sourceRow] = await readSourceRows(db, albumId)
+    expect(sourceRow).toMatchObject({ source: "lastfm", matched: true })
+    expect(sourceRow!.enrichedAt).toBeInstanceOf(Date)
 
     const rows = await db
       .select()
@@ -107,16 +125,16 @@ describe("enrichAlbum", () => {
     })
   })
 
-  it("returns early without API call if already enriched", async () => {
+  it("self-gates: no API call when a lastfm source row already exists", async () => {
     let callCount = 0
-    const fetcher: AlbumInfoFetcher = {
+    const source = lastfmSource({
       getAlbumInfo: async () => {
         callCount++
         return { imageUrl: "https://example.com/new.png", tracks: [] }
       },
-    }
+    })
 
-    await enrichAlbum(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [source] })
 
     expect(callCount).toBe(0)
   })
@@ -147,7 +165,7 @@ describe("enrichAlbum", () => {
     expect(wildlife!.trackId).toBeNull()
   })
 
-  it("does not set lastfm_enriched_at if fetcher throws", async () => {
+  it("writes no source row and no tracks when the fetcher throws", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -159,18 +177,15 @@ describe("enrichAlbum", () => {
     })
     const freshAlbumId = r.albumId!
 
-    const fetcher = failingFetcher(new Error("LastFM API: 503 Service Unavailable"))
+    const source = lastfmSource(
+      failingFetcher(new Error("LastFM API: 503 Service Unavailable"))
+    )
 
-    await expect(
-      enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
-    ).rejects.toThrow("503 Service Unavailable")
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    await enrichAlbum(freshDb, { albumId: freshAlbumId, sources: [source] })
+    vi.restoreAllMocks()
 
-    const [album] = await freshDb
-      .select({ lastfmEnrichedAt: albums.lastfmEnrichedAt })
-      .from(albums)
-      .where(eq(albums.id, freshAlbumId))
-
-    expect(album!.lastfmEnrichedAt).toBeNull()
+    expect(await readSourceRows(freshDb, freshAlbumId)).toHaveLength(0)
 
     const trackRows = await freshDb
       .select()
@@ -182,7 +197,7 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
-  it("leaves lastfm_enriched_at null and writes no tracks if the track insert fails", async () => {
+  it("writes no source row and no tracks if the track insert fails", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -196,24 +211,21 @@ describe("enrichAlbum", () => {
 
     // Two tracks share trackNumber 1 -> violates album_tracks PK
     // (album_id, track_number) on insert.
-    const fetcher = fakeFetcher({
-      imageUrl: "https://example.com/go-plastic.jpg",
-      tracks: [
-        { name: "My Red Hot Car", trackNumber: 1, duration: 295 },
-        { name: "Boneville Occident", trackNumber: 1, duration: 222 },
-      ],
-    })
+    const source = lastfmSource(
+      fakeFetcher({
+        imageUrl: "https://example.com/go-plastic.jpg",
+        tracks: [
+          { name: "My Red Hot Car", trackNumber: 1, duration: 295 },
+          { name: "Boneville Occident", trackNumber: 1, duration: 222 },
+        ],
+      })
+    )
 
-    await expect(
-      enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
-    ).rejects.toThrow()
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    await enrichAlbum(freshDb, { albumId: freshAlbumId, sources: [source] })
+    vi.restoreAllMocks()
 
-    const [album] = await freshDb
-      .select({ lastfmEnrichedAt: albums.lastfmEnrichedAt })
-      .from(albums)
-      .where(eq(albums.id, freshAlbumId))
-
-    expect(album!.lastfmEnrichedAt).toBeNull()
+    expect(await readSourceRows(freshDb, freshAlbumId)).toHaveLength(0)
 
     const trackRows = await freshDb
       .select()
@@ -225,7 +237,7 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
-  it("heals an album left with stale tracks and no lastfm_enriched_at marker on retry", async () => {
+  it("heals an album left with stale tracks and no source row on retry", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -238,8 +250,7 @@ describe("enrichAlbum", () => {
     const freshAlbumId = r.albumId!
 
     // Simulate an interrupted prior enrichment: tracks were written but the
-    // lastfm_enriched_at update never committed (separate neon-http
-    // round-trip). The album page gate sees null lastfm_enriched_at and
+    // completion row never committed. The orchestrator sees no source row and
     // retries.
     await freshDb.insert(albumTracks).values({
       albumId: freshAlbumId,
@@ -249,22 +260,20 @@ describe("enrichAlbum", () => {
       duration: null,
     })
 
-    const fetcher = fakeFetcher({
-      imageUrl: "https://example.com/double-figure.jpg",
-      tracks: [
-        { name: "Eyen", trackNumber: 1, duration: 268 },
-        { name: "Squance", trackNumber: 2, duration: 312 },
-      ],
-    })
+    const source = lastfmSource(
+      fakeFetcher({
+        imageUrl: "https://example.com/double-figure.jpg",
+        tracks: [
+          { name: "Eyen", trackNumber: 1, duration: 268 },
+          { name: "Squance", trackNumber: 2, duration: 312 },
+        ],
+      })
+    )
 
-    await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
+    await enrichAlbum(freshDb, { albumId: freshAlbumId, sources: [source] })
 
-    const [album] = await freshDb
-      .select({ lastfmEnrichedAt: albums.lastfmEnrichedAt })
-      .from(albums)
-      .where(eq(albums.id, freshAlbumId))
-
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
+    const [sourceRow] = await readSourceRows(freshDb, freshAlbumId)
+    expect(sourceRow).toMatchObject({ source: "lastfm", matched: true })
 
     const trackRows = await freshDb
       .select({ name: albumTracks.name, trackNumber: albumTracks.trackNumber })
@@ -277,7 +286,7 @@ describe("enrichAlbum", () => {
     await freshClient.close()
   })
 
-  it("sets lastfm_enriched_at but leaves image_url null when no artwork", async () => {
+  it("records the pass but leaves image_url null when there is no artwork", async () => {
     const { db: freshDb, client: freshClient } = await setupTestDb()
 
     const r = await recordListen(freshDb, {
@@ -289,23 +298,27 @@ describe("enrichAlbum", () => {
     })
     const freshAlbumId = r.albumId!
 
-    const fetcher = fakeFetcher({
-      imageUrl: null,
-      tracks: [
-        { name: "Xtal", trackNumber: 1, duration: 290 },
-        { name: "Tha", trackNumber: 2, duration: 540 },
-      ],
-    })
+    const source = lastfmSource(
+      fakeFetcher({
+        imageUrl: null,
+        tracks: [
+          { name: "Xtal", trackNumber: 1, duration: 290 },
+          { name: "Tha", trackNumber: 2, duration: 540 },
+        ],
+      })
+    )
 
-    await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
+    await enrichAlbum(freshDb, { albumId: freshAlbumId, sources: [source] })
 
     const [album] = await freshDb
-      .select({ imageUrl: albums.imageUrl, lastfmEnrichedAt: albums.lastfmEnrichedAt })
+      .select({ imageUrl: albums.imageUrl })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
     expect(album!.imageUrl).toBeNull()
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
+
+    const [sourceRow] = await readSourceRows(freshDb, freshAlbumId)
+    expect(sourceRow).toMatchObject({ source: "lastfm", matched: true })
 
     const trackRows = await freshDb
       .select()
@@ -373,20 +386,24 @@ describe("enrichAlbum", () => {
     })
     const freshAlbumId = r.albumId!
 
-    const fetcher = fakeFetcher({
-      imageUrl: "https://example.com/eno.jpg",
-      tracks: [],
-    })
+    const source = lastfmSource(
+      fakeFetcher({
+        imageUrl: "https://example.com/eno.jpg",
+        tracks: [],
+      })
+    )
 
-    await enrichAlbum(freshDb, { albumId: freshAlbumId, fetcher })
+    await enrichAlbum(freshDb, { albumId: freshAlbumId, sources: [source] })
 
     const [album] = await freshDb
-      .select({ imageUrl: albums.imageUrl, lastfmEnrichedAt: albums.lastfmEnrichedAt })
+      .select({ imageUrl: albums.imageUrl })
       .from(albums)
       .where(eq(albums.id, freshAlbumId))
 
     expect(album!.imageUrl).toBe("https://example.com/eno.jpg")
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
+
+    const [sourceRow] = await readSourceRows(freshDb, freshAlbumId)
+    expect(sourceRow).toMatchObject({ source: "lastfm", matched: true })
 
     const trackRows = await freshDb
       .select()
@@ -403,7 +420,8 @@ const LASTFM_PLACEHOLDER =
   "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
 
 // A LastFM-enriched album in a chosen artwork state, the starting point every
-// TIDAL artwork test shares. Returns the album id.
+// TIDAL artwork test shares. Seeds the image_url plus a completed lastfm source
+// row so the album mirrors a post-LastFM pass. Returns the album id.
 async function seedLastfmEnrichedAlbum(
   db: Database,
   opts: {
@@ -411,7 +429,7 @@ async function seedLastfmEnrichedAlbum(
     track: string
     album: string
     imageUrl: string | null
-    lastfmEnrichedAt?: Date | null
+    lastfmRow?: boolean
   }
 ): Promise<number> {
   const r = await recordListen(db, {
@@ -425,12 +443,17 @@ async function seedLastfmEnrichedAlbum(
 
   await db
     .update(albums)
-    .set({
-      imageUrl: opts.imageUrl,
-      lastfmEnrichedAt:
-        opts.lastfmEnrichedAt === undefined ? new Date() : opts.lastfmEnrichedAt,
-    })
+    .set({ imageUrl: opts.imageUrl })
     .where(eq(albums.id, albumId))
+
+  if (opts.lastfmRow !== false) {
+    await db.insert(albumSources).values({
+      albumId,
+      source: "lastfm",
+      enrichedAt: new Date(),
+      matched: true,
+    })
+  }
 
   return albumId
 }
@@ -458,18 +481,29 @@ function fakeTidalFetcher(opts: {
   return fetcher
 }
 
-async function readAlbum(db: Database, albumId: number) {
+function tidalSource(fetcher: TidalCatalogFetcher): EnrichmentSource {
+  return new TidalEnrichmentSource(fetcher)
+}
+
+async function readAlbumImage(db: Database, albumId: number) {
   const [album] = await db
-    .select({
-      imageUrl: albums.imageUrl,
-      tidalEnrichedAt: albums.tidalEnrichedAt,
-    })
+    .select({ imageUrl: albums.imageUrl })
     .from(albums)
     .where(eq(albums.id, albumId))
   return album!
 }
 
-describe("enrichAlbumWithTidal", () => {
+async function readTidalRow(db: Database, albumId: number) {
+  const [row] = await db
+    .select()
+    .from(albumSources)
+    .where(
+      and(eq(albumSources.albumId, albumId), eq(albumSources.source, "tidal"))
+    )
+  return row
+}
+
+describe("TidalEnrichmentSource via enrichAlbum", () => {
   it("fills missing artwork from TIDAL when the album and artist match", async () => {
     const { db, client } = await setupTestDb()
     const albumId = await seedLastfmEnrichedAlbum(db, {
@@ -484,11 +518,12 @@ describe("enrichAlbumWithTidal", () => {
       detail: { artistName: "Autechre", coverArtUrl: "https://tidal/cover.jpg" },
     })
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
-    const album = await readAlbum(db, albumId)
-    expect(album.imageUrl).toBe("https://tidal/cover.jpg")
-    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect((await readAlbumImage(db, albumId)).imageUrl).toBe(
+      "https://tidal/cover.jpg"
+    )
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: true })
 
     await client.close()
   })
@@ -510,11 +545,12 @@ describe("enrichAlbumWithTidal", () => {
       },
     })
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
-    expect((await readAlbum(db, albumId)).imageUrl).toBe(
+    expect((await readAlbumImage(db, albumId)).imageUrl).toBe(
       "https://tidal/geogaddi.jpg"
     )
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: true })
 
     await client.close()
   })
@@ -530,17 +566,18 @@ describe("enrichAlbumWithTidal", () => {
 
     const fetcher = fakeTidalFetcher({})
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
-    const album = await readAlbum(db, albumId)
-    expect(album.imageUrl).toBe("https://lastfm.example/real-cover.png")
-    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect((await readAlbumImage(db, albumId)).imageUrl).toBe(
+      "https://lastfm.example/real-cover.png"
+    )
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: false })
     expect(fetcher.searchCalls).toBe(0)
 
     await client.close()
   })
 
-  it("marks done without artwork when the album is not on TIDAL", async () => {
+  it("records a no-match without artwork when the album is not on TIDAL", async () => {
     const { db, client } = await setupTestDb()
     const albumId = await seedLastfmEnrichedAlbum(db, {
       artist: "Some Obscure Act",
@@ -551,11 +588,10 @@ describe("enrichAlbumWithTidal", () => {
 
     const fetcher = fakeTidalFetcher({ candidates: [] })
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
-    const album = await readAlbum(db, albumId)
-    expect(album.imageUrl).toBeNull()
-    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect((await readAlbumImage(db, albumId)).imageUrl).toBeNull()
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: false })
     expect(fetcher.getAlbumCalls).toBe(0)
 
     await client.close()
@@ -576,11 +612,10 @@ describe("enrichAlbumWithTidal", () => {
       detail: { artistName: "Daniel Avery", coverArtUrl: "https://tidal/wrong.jpg" },
     })
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
-    const album = await readAlbum(db, albumId)
-    expect(album.imageUrl).toBeNull()
-    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect((await readAlbumImage(db, albumId)).imageUrl).toBeNull()
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: false })
 
     await client.close()
   })
@@ -599,16 +634,15 @@ describe("enrichAlbumWithTidal", () => {
       detail: { artistName: "Plaid", coverArtUrl: null },
     })
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
-    const album = await readAlbum(db, albumId)
-    expect(album.imageUrl).toBeNull()
-    expect(album.tidalEnrichedAt).toBeInstanceOf(Date)
+    expect((await readAlbumImage(db, albumId)).imageUrl).toBeNull()
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: false })
 
     await client.close()
   })
 
-  it("leaves tidal_enriched_at null when the catalog call fails", async () => {
+  it("writes no tidal row when the catalog call fails", async () => {
     const { db, client } = await setupTestDb()
     const albumId = await seedLastfmEnrichedAlbum(db, {
       artist: "Squarepusher",
@@ -621,36 +655,16 @@ describe("enrichAlbumWithTidal", () => {
       searchError: new Error("TIDAL API error: 429 Too Many Requests"),
     })
 
-    await expect(
-      enrichAlbumWithTidal(db, { albumId, fetcher })
-    ).rejects.toThrow("429")
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
+    vi.restoreAllMocks()
 
-    expect((await readAlbum(db, albumId)).tidalEnrichedAt).toBeNull()
-
-    await client.close()
-  })
-
-  it("defers without a catalog call when LastFM has not enriched yet", async () => {
-    const { db, client } = await setupTestDb()
-    const albumId = await seedLastfmEnrichedAlbum(db, {
-      artist: "Burial",
-      track: "Archangel",
-      album: "Untrue",
-      imageUrl: null,
-      lastfmEnrichedAt: null,
-    })
-
-    const fetcher = fakeTidalFetcher({})
-
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
-
-    expect((await readAlbum(db, albumId)).tidalEnrichedAt).toBeNull()
-    expect(fetcher.searchCalls).toBe(0)
+    expect(await readTidalRow(db, albumId)).toBeUndefined()
 
     await client.close()
   })
 
-  it("returns early without a catalog call when already TIDAL-enriched", async () => {
+  it("self-gates: no catalog call when a tidal source row already exists", async () => {
     const { db, client } = await setupTestDb()
     const albumId = await seedLastfmEnrichedAlbum(db, {
       artist: "Four Tet",
@@ -658,17 +672,153 @@ describe("enrichAlbumWithTidal", () => {
       album: "There Is Love in You",
       imageUrl: null,
     })
-    await db
-      .update(albums)
-      .set({ tidalEnrichedAt: new Date() })
-      .where(eq(albums.id, albumId))
+    await db.insert(albumSources).values({
+      albumId,
+      source: "tidal",
+      enrichedAt: new Date(),
+      matched: false,
+    })
 
     const fetcher = fakeTidalFetcher({})
 
-    await enrichAlbumWithTidal(db, { albumId, fetcher })
+    await enrichAlbum(db, { albumId, sources: [tidalSource(fetcher)] })
 
     expect(fetcher.searchCalls).toBe(0)
 
     await client.close()
+  })
+})
+
+// A fake EnrichmentSource that records its calls, for orchestration tests that
+// don't need the real source bodies.
+function fakeSource(
+  name: "lastfm" | "tidal",
+  opts: { matched?: boolean; error?: Error; order?: string[] } = {}
+): EnrichmentSource & { calls: number } {
+  const source = {
+    name,
+    calls: 0,
+    async enrich() {
+      source.calls++
+      opts.order?.push(name)
+      if (opts.error) throw opts.error
+      return { matched: opts.matched ?? true }
+    },
+  }
+  return source
+}
+
+describe("enrichAlbum orchestrator", () => {
+  let db: Database
+  let client: PGlite
+  let seq = 0
+
+  beforeAll(async () => {
+    ;({ db, client } = await setupTestDb())
+  })
+
+  afterAll(async () => {
+    await client.close()
+  })
+
+  // A distinct album per test keeps the shared db free of cross-test coupling.
+  async function seedAlbum(): Promise<number> {
+    seq++
+    const r = await recordListen(db, {
+      artist: { name: `Orbital ${seq}` },
+      track: { name: "Halcyon" },
+      album: { name: `Orbital ${seq}` },
+      listenedAt: new Date("2024-12-01T10:00:00Z"),
+      source: "lastfm",
+    })
+    return r.albumId!
+  }
+
+  it("runs sources in priority order and writes a row per source", async () => {
+    const albumId = await seedAlbum()
+    const order: string[] = []
+
+    await enrichAlbum(db, {
+      albumId,
+      sources: [
+        fakeSource("lastfm", { matched: true, order }),
+        fakeSource("tidal", { matched: false, order }),
+      ],
+    })
+
+    expect(order).toEqual(["lastfm", "tidal"])
+
+    const rows = await readSourceRows(db, albumId)
+    expect(rows).toHaveLength(2)
+    expect(rows.find((r) => r.source === "lastfm")).toMatchObject({
+      matched: true,
+    })
+    expect(rows.find((r) => r.source === "tidal")).toMatchObject({
+      matched: false,
+    })
+  })
+
+  it("self-gates a completed source and does not re-run it", async () => {
+    const albumId = await seedAlbum()
+    await db.insert(albumSources).values({
+      albumId,
+      source: "lastfm",
+      enrichedAt: new Date(),
+      matched: true,
+    })
+
+    const lastfm = fakeSource("lastfm")
+    const tidal = fakeSource("tidal", { matched: false })
+
+    await enrichAlbum(db, { albumId, sources: [lastfm, tidal] })
+
+    expect(lastfm.calls).toBe(0)
+    expect(tidal.calls).toBe(1)
+  })
+
+  it("a no-match writes matched=false and is not retried", async () => {
+    const albumId = await seedAlbum()
+
+    const first = fakeSource("tidal", { matched: false })
+    await enrichAlbum(db, { albumId, sources: [first] })
+
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: false })
+
+    const second = fakeSource("tidal", { matched: true })
+    await enrichAlbum(db, { albumId, sources: [second] })
+
+    // Still the original no-match row; the completed pass is never retried.
+    expect(second.calls).toBe(0)
+    expect(await readTidalRow(db, albumId)).toMatchObject({ matched: false })
+  })
+
+  it("a transient failure writes no row, stops the ladder, and retries next visit", async () => {
+    const albumId = await seedAlbum()
+
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const failing = fakeSource("lastfm", { error: new Error("boom") })
+    const tidal = fakeSource("tidal", { matched: true })
+    await enrichAlbum(db, { albumId, sources: [failing, tidal] })
+
+    // No row for the failed source, and the lower rung never ran this visit.
+    expect(await readSourceRows(db, albumId)).toHaveLength(0)
+    expect(tidal.calls).toBe(0)
+
+    // Next visit: the source succeeds and both rungs complete.
+    const retry = fakeSource("lastfm", { matched: true })
+    const tidal2 = fakeSource("tidal", { matched: true })
+    await enrichAlbum(db, { albumId, sources: [retry, tidal2] })
+    vi.restoreAllMocks()
+
+    expect(retry.calls).toBe(1)
+    expect(tidal2.calls).toBe(1)
+    expect(await readSourceRows(db, albumId)).toHaveLength(2)
+  })
+
+  it("throws when the album does not exist", async () => {
+    await expect(
+      enrichAlbum(db, { albumId: 99999, sources: [fakeSource("lastfm")] })
+    ).rejects.toThrow("Album not found")
   })
 })

@@ -4,8 +4,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "./index"
-import { enrichAlbum } from "./enrichment"
+import { enrichAlbum, LastfmEnrichmentSource } from "./enrichment"
 import { recordListen } from "./ingestion"
+import { albumSources } from "./schema"
+import { eq } from "drizzle-orm"
 import {
   getAlbumDetail,
   getArtistDetail,
@@ -381,7 +383,6 @@ describe("getAlbumDetail", () => {
 
   it("returns tracks in play-count order with null enrichment fields when un-enriched", async () => {
     const album = await getAlbumDetail(db, { albumId: mhtrtcAlbumId })
-    expect(album!.lastfmEnrichedAt).toBeNull()
     expect(album!.imageUrl).toBeNull()
     expect(album!.tracks[0]!.trackNumber).toBeNull()
     expect(album!.tracks[0]!.duration).toBeNull()
@@ -484,17 +485,19 @@ describe("getAlbumDetail (enriched album)", () => {
 
     await enrichAlbum(enrichedDb, {
       albumId: enrichedAlbumId,
-      fetcher: {
-        getAlbumInfo: async () => ({
-          imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png",
-          tracks: [
-            { name: "Wildlife Analysis", trackNumber: 1, duration: 373 },
-            { name: "An Eagle in Your Mind", trackNumber: 2, duration: 393 },
-            { name: "Roygbiv", trackNumber: 3, duration: 172 },
-            { name: "Aquarius", trackNumber: 4, duration: 356 },
-          ],
+      sources: [
+        new LastfmEnrichmentSource({
+          getAlbumInfo: async () => ({
+            imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/abc.png",
+            tracks: [
+              { name: "Wildlife Analysis", trackNumber: 1, duration: 373 },
+              { name: "An Eagle in Your Mind", trackNumber: 2, duration: 393 },
+              { name: "Roygbiv", trackNumber: 3, duration: 172 },
+              { name: "Aquarius", trackNumber: 4, duration: 356 },
+            ],
+          }),
         }),
-      },
+      ],
     })
   })
 
@@ -505,7 +508,6 @@ describe("getAlbumDetail (enriched album)", () => {
   it("returns tracks in track-number order", async () => {
     const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
     expect(album).not.toBeNull()
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
     expect(album!.imageUrl).toBe("https://lastfm.freetls.fastly.net/i/u/300x300/abc.png")
 
     const trackNumbers = album!.tracks.map((t) => t.trackNumber)
@@ -575,16 +577,17 @@ describe("getAlbumDetail (enriched, empty tracklist)", () => {
     // LastFM enriched the album but album.getInfo carried no tracklist.
     await enrichAlbum(emptyDb, {
       albumId: emptyAlbumId,
-      fetcher: {
-        getAlbumInfo: async () => ({
-          imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/noxz.png",
-          tracks: [],
+      sources: [
+        new LastfmEnrichmentSource({
+          getAlbumInfo: async () => ({
+            imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/noxz.png",
+            tracks: [],
+          }),
         }),
-      },
+      ],
     })
 
     const album = await getAlbumDetail(emptyDb, { albumId: emptyAlbumId })
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
     expect(album!.tracks.map((t) => t.trackName)).toEqual(["Dreaming Wide Awake"])
 
     await emptyClient.close()
@@ -625,16 +628,18 @@ describe("getAlbumDetail (enriched, full tracklist)", () => {
 
     await enrichAlbum(enrichedDb, {
       albumId: enrichedAlbumId,
-      fetcher: {
-        getAlbumInfo: async () => ({
-          imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/boc.png",
-          tracks: [
-            { name: "Wildlife Analysis", trackNumber: 1, duration: 88 },
-            { name: "Roygbiv", trackNumber: 2, duration: 172 },
-            { name: "Aquarius", trackNumber: 3, duration: 350 },
-          ],
+      sources: [
+        new LastfmEnrichmentSource({
+          getAlbumInfo: async () => ({
+            imageUrl: "https://lastfm.freetls.fastly.net/i/u/300x300/boc.png",
+            tracks: [
+              { name: "Wildlife Analysis", trackNumber: 1, duration: 88 },
+              { name: "Roygbiv", trackNumber: 2, duration: 172 },
+              { name: "Aquarius", trackNumber: 3, duration: 350 },
+            ],
+          }),
         }),
-      },
+      ],
     })
 
     return { enrichedDb, enrichedClient, enrichedAlbumId }
@@ -646,7 +651,6 @@ describe("getAlbumDetail (enriched, full tracklist)", () => {
 
     const album = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
 
-    expect(album!.lastfmEnrichedAt).toBeInstanceOf(Date)
     expect(
       album!.tracks.map((t) => ({
         trackNumber: t.trackNumber,
@@ -682,8 +686,11 @@ describe("getAlbumDetail (enriched, full tracklist)", () => {
     const { enrichedDb, enrichedClient, enrichedAlbumId } =
       await seedEnrichedAlbum()
 
-    const before = await getAlbumDetail(enrichedDb, { albumId: enrichedAlbumId })
-    const enrichedAt = before!.lastfmEnrichedAt
+    const [before] = await enrichedDb
+      .select({ enrichedAt: albumSources.enrichedAt })
+      .from(albumSources)
+      .where(eq(albumSources.albumId, enrichedAlbumId))
+    const enrichedAt = before!.enrichedAt
 
     await recordListen(enrichedDb, {
       artist: { name: "Boards of Canada" },
@@ -697,8 +704,13 @@ describe("getAlbumDetail (enriched, full tracklist)", () => {
     const aquarius = after!.tracks.find((t) => t.trackName === "Aquarius")
 
     expect(aquarius!.humCount).toBe(2)
-    // The enrichment marker is untouched — counts are query-time, not stored.
-    expect(after!.lastfmEnrichedAt).toEqual(enrichedAt)
+
+    // The enrichment completion row is untouched — counts are query-time.
+    const [afterSource] = await enrichedDb
+      .select({ enrichedAt: albumSources.enrichedAt })
+      .from(albumSources)
+      .where(eq(albumSources.albumId, enrichedAlbumId))
+    expect(afterSource!.enrichedAt).toEqual(enrichedAt)
 
     await enrichedClient.close()
   })

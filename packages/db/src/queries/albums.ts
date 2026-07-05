@@ -18,8 +18,6 @@ export async function getAlbumDetail(
       albumName: schema.albums.name,
       artistId: schema.artists.id,
       artistName: schema.artists.name,
-      lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
-      tidalEnrichedAt: schema.albums.tidalEnrichedAt,
       imageUrl: schema.albums.imageUrl,
     })
     .from(schema.albums)
@@ -40,7 +38,19 @@ export async function getAlbumDetail(
 
   let tracks: AlbumDetailTrack[] = []
 
-  if (album.lastfmEnrichedAt) {
+  // LastFM is the only source that writes album_tracks, so its completion row
+  // is the gate for reading the enriched tracklist.
+  const [lastfmSource] = await db
+    .select({ albumId: schema.albumSources.albumId })
+    .from(schema.albumSources)
+    .where(
+      and(
+        eq(schema.albumSources.albumId, albumId),
+        eq(schema.albumSources.source, "lastfm")
+      )
+    )
+
+  if (lastfmSource) {
     tracks = await getEnrichedTracks(db, albumId, humConditions)
   }
 

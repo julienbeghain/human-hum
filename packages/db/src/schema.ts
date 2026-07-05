@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   primaryKey,
@@ -41,14 +42,29 @@ export const albums = listenSchema.table(
       .notNull()
       .references(() => artists.id),
     imageUrl: text("image_url"),
-    lastfmEnrichedAt: timestamp("lastfm_enriched_at", { withTimezone: true }),
-    tidalEnrichedAt: timestamp("tidal_enriched_at", { withTimezone: true }),
     ...timestampsWithoutUpdate,
   },
   (t) => [
     uniqueIndex("albums_name_artist_id_idx").on(t.name, t.artistId),
     index("albums_artist_id_idx").on(t.artistId),
   ]
+)
+
+// One row per (album, source): enriched_at records that the source's pass ran
+// (a no-match is a completed pass — matched = false), so a source's own row is
+// its self-gate. Provenance is derived, not stored: the highest-priority
+// matched = true row. A new source is a new row, never a new column (ADR-0008).
+export const albumSources = listenSchema.table(
+  "album_sources",
+  {
+    albumId: integer("album_id")
+      .notNull()
+      .references(() => albums.id),
+    source: sourceEnum().notNull(),
+    enrichedAt: timestamp("enriched_at", { withTimezone: true }).notNull(),
+    matched: boolean().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.albumId, t.source] })]
 )
 
 export const albumTracks = listenSchema.table(

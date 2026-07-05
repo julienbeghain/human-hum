@@ -6,7 +6,7 @@ vi.setConfig({ hookTimeout: 30_000 })
 
 import type { Database } from "./index"
 import { recordListen } from "./ingestion"
-import { albums, albumTracks } from "./schema"
+import { albums, albumSources, albumTracks } from "./schema"
 import { setupTestDb } from "./test-utils"
 
 let client: PGlite
@@ -43,42 +43,60 @@ describe("albums enrichment columns", () => {
     expect(row!.imageUrl).toBeNull()
   })
 
-  it("lastfm_enriched_at and tidal_enriched_at default to null", async () => {
-    const [row] = await db
-      .select({
-        lastfmEnrichedAt: albums.lastfmEnrichedAt,
-        tidalEnrichedAt: albums.tidalEnrichedAt,
-      })
-      .from(albums)
-      .where(eq(albums.id, albumId))
-
-    expect(row!.lastfmEnrichedAt).toBeNull()
-    expect(row!.tidalEnrichedAt).toBeNull()
-  })
-
-  it("can set image_url and lastfm_enriched_at", async () => {
-    const now = new Date()
+  it("can set image_url", async () => {
     await db
       .update(albums)
-      .set({ imageUrl: "https://example.com/art.jpg", lastfmEnrichedAt: now })
+      .set({ imageUrl: "https://example.com/art.jpg" })
       .where(eq(albums.id, albumId))
 
     const [row] = await db
-      .select({
-        imageUrl: albums.imageUrl,
-        lastfmEnrichedAt: albums.lastfmEnrichedAt,
-      })
+      .select({ imageUrl: albums.imageUrl })
       .from(albums)
       .where(eq(albums.id, albumId))
 
     expect(row!.imageUrl).toBe("https://example.com/art.jpg")
-    expect(row!.lastfmEnrichedAt).toEqual(now)
 
     // Reset for other tests
     await db
       .update(albums)
-      .set({ imageUrl: null, lastfmEnrichedAt: null })
+      .set({ imageUrl: null })
       .where(eq(albums.id, albumId))
+  })
+})
+
+describe("album_sources table", () => {
+  it("records a completed pass as one row per (album, source)", async () => {
+    const enrichedAt = new Date()
+    await db.insert(albumSources).values([
+      { albumId, source: "lastfm", enrichedAt, matched: true },
+      { albumId, source: "tidal", enrichedAt, matched: false },
+    ])
+
+    const rows = await db
+      .select()
+      .from(albumSources)
+      .where(eq(albumSources.albumId, albumId))
+
+    expect(rows).toHaveLength(2)
+    expect(rows.find((r) => r.source === "lastfm")).toMatchObject({
+      albumId,
+      matched: true,
+    })
+    expect(rows.find((r) => r.source === "tidal")).toMatchObject({
+      albumId,
+      matched: false,
+    })
+  })
+
+  it("enforces composite PK (album_id, source)", async () => {
+    await expect(
+      db.insert(albumSources).values({
+        albumId,
+        source: "lastfm",
+        enrichedAt: new Date(),
+        matched: true,
+      })
+    ).rejects.toThrow()
   })
 })
 

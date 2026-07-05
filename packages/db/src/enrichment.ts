@@ -21,6 +21,22 @@ export function normalizeTrackName(name: string): string {
     .trim()
 }
 
+// A single enrichment source's pass over one album. `matched` records whether
+// the source supplied displayed metadata for the album; a completed pass that
+// found nothing returns `matched: false` (a no-match is still done — ADR-0008).
+// A transient failure throws instead, so the orchestrator records no row and
+// the pass retries on the album's next visit.
+export interface EnrichmentOutcome {
+  matched: boolean
+}
+
+export type EnrichmentSourceName = "lastfm" | "tidal"
+
+export interface EnrichmentSource {
+  readonly name: EnrichmentSourceName
+  enrich(db: Database, opts: { albumId: number }): Promise<EnrichmentOutcome>
+}
+
 export interface AlbumInfoResult {
   imageUrl: string | null
   tracks: Array<{ name: string; trackNumber: number; duration: number | null }>
@@ -96,10 +112,6 @@ export class LastfmAlbumInfoFetcher implements AlbumInfoFetcher {
   }
 }
 
-function createDefaultFetcher(): AlbumInfoFetcher {
-  return new LastfmAlbumInfoFetcher(env.LASTFM_API_KEY)
-}
-
 async function requireArtistName(
   db: Database,
   artistId: number
@@ -116,89 +128,80 @@ async function requireArtistName(
   return artist.name
 }
 
-export async function enrichAlbum(
-  db: Database,
-  opts: { albumId: number; fetcher?: AlbumInfoFetcher }
-): Promise<void> {
-  const { albumId } = opts
+// LastFM `album.getInfo`: the floor of the ladder. It creates `album_tracks`
+// and fills artwork, and (unlike TIDAL) always matches when the fetch succeeds.
+export class LastfmEnrichmentSource implements EnrichmentSource {
+  readonly name = "lastfm" as const
 
-  const fetcher =
-    opts.fetcher ?? createDefaultFetcher()
+  constructor(private readonly fetcher: AlbumInfoFetcher) {}
 
-  const [album] = await db
-    .select({
-      lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
-      name: schema.albums.name,
-      artistId: schema.albums.artistId,
-    })
-    .from(schema.albums)
-    .where(eq(schema.albums.id, albumId))
+  async enrich(
+    db: Database,
+    { albumId }: { albumId: number }
+  ): Promise<EnrichmentOutcome> {
+    const [album] = await db
+      .select({ name: schema.albums.name, artistId: schema.albums.artistId })
+      .from(schema.albums)
+      .where(eq(schema.albums.id, albumId))
 
-  if (!album) {
-    throw new Error(`Album not found: ${albumId}`)
-  }
+    if (!album) {
+      throw new Error(`Album not found: ${albumId}`)
+    }
 
-  if (album.lastfmEnrichedAt) {
-    return
-  }
+    const artistName = await requireArtistName(db, album.artistId)
 
-  const artistName = await requireArtistName(db, album.artistId)
-
-  const result = await fetcher.getAlbumInfo({
-    albumName: album.name,
-    artistName,
-  })
-
-  // Ordered, not transactional: the neon-http driver has no interactive
-  // transactions, so we write so that lastfm_enriched_at — the completion
-  // marker — commits last, only after the tracklist is durable. A failure
-  // before it leaves lastfm_enriched_at null and the album page's on-visit
-  // gate retries. The delete makes the track write idempotent so a retry
-  // after a partial run heals instead of colliding on the (album_id,
-  // track_number) PK. This path is short-lived: TIDAL is expected to
-  // supersede Last.fm enrichment.
-  await db.delete(schema.albumTracks).where(eq(schema.albumTracks.albumId, albumId))
-
-  if (result.tracks.length > 0) {
-    const artistTracks = await db
-      .select({ id: schema.tracks.id, name: schema.tracks.name })
-      .from(schema.tracks)
-      .where(eq(schema.tracks.artistId, album.artistId))
-
-    const trackRows = result.tracks.map((t) => {
-      const normalized = normalizeTrackName(t.name)
-      const match = artistTracks.find(
-        (at) => normalizeTrackName(at.name) === normalized
-      )
-
-      return {
-        albumId,
-        trackNumber: t.trackNumber,
-        name: t.name,
-        trackId: match?.id ?? null,
-        duration: t.duration,
-      }
+    const result = await this.fetcher.getAlbumInfo({
+      albumName: album.name,
+      artistName,
     })
 
-    await db.insert(schema.albumTracks).values(trackRows)
-  }
+    // Ordered, not transactional: the neon-http driver has no interactive
+    // transactions, so we write the tracklist and artwork here and let the
+    // orchestrator commit the album_sources completion row last — only after
+    // this returns. A failure before it leaves no row, and the album page's
+    // on-visit gate retries. The delete makes the track write idempotent so a
+    // retry after a partial run heals instead of colliding on the (album_id,
+    // track_number) PK.
+    await db
+      .delete(schema.albumTracks)
+      .where(eq(schema.albumTracks.albumId, albumId))
 
-  await db
-    .update(schema.albums)
-    .set({
-      imageUrl: result.imageUrl,
-      lastfmEnrichedAt: new Date(),
-    })
-    .where(eq(schema.albums.id, albumId))
+    if (result.tracks.length > 0) {
+      const artistTracks = await db
+        .select({ id: schema.tracks.id, name: schema.tracks.name })
+        .from(schema.tracks)
+        .where(eq(schema.tracks.artistId, album.artistId))
+
+      const trackRows = result.tracks.map((t) => {
+        const normalized = normalizeTrackName(t.name)
+        const match = artistTracks.find(
+          (at) => normalizeTrackName(at.name) === normalized
+        )
+
+        return {
+          albumId,
+          trackNumber: t.trackNumber,
+          name: t.name,
+          trackId: match?.id ?? null,
+          duration: t.duration,
+        }
+      })
+
+      await db.insert(schema.albumTracks).values(trackRows)
+    }
+
+    await db
+      .update(schema.albums)
+      .set({ imageUrl: result.imageUrl })
+      .where(eq(schema.albums.id, albumId))
+
+    return { matched: true }
+  }
 }
 
 export interface TidalCatalogFetcher {
   searchAlbums(query: string): Promise<TidalAlbum[]>
   getAlbum(albumId: string): Promise<TidalAlbumDetail>
-}
-
-function createDefaultTidalFetcher(): TidalCatalogFetcher {
-  return { searchAlbums: searchTidalAlbums, getAlbum: getTidalAlbum }
 }
 
 // LastFM serves a shared star image for albums it has no artwork for; its URL
@@ -241,37 +244,81 @@ async function findTidalCoverArt(
   return detail.coverArtUrl
 }
 
-async function writeTidalEnrichment(
-  db: Database,
-  albumId: number,
-  coverArtUrl?: string | null
-): Promise<void> {
-  await db
-    .update(schema.albums)
-    .set({
-      tidalEnrichedAt: new Date(),
-      // Omitted on a no-match or absent cover so a genuine existing value is
-      // never nulled out.
-      ...(coverArtUrl ? { imageUrl: coverArtUrl } : {}),
+// TIDAL catalog: repairs missing/placeholder artwork with a confidently matched
+// catalog cover. It runs below LastFM in the ladder (orchestrator order), so it
+// reads the artwork LastFM already set. `matched` is whether TIDAL supplied a
+// cover; genuine existing artwork or an unfindable album is a completed no-match.
+export class TidalEnrichmentSource implements EnrichmentSource {
+  readonly name = "tidal" as const
+
+  constructor(private readonly fetcher: TidalCatalogFetcher) {}
+
+  async enrich(
+    db: Database,
+    { albumId }: { albumId: number }
+  ): Promise<EnrichmentOutcome> {
+    const [album] = await db
+      .select({
+        name: schema.albums.name,
+        artistId: schema.albums.artistId,
+        imageUrl: schema.albums.imageUrl,
+      })
+      .from(schema.albums)
+      .where(eq(schema.albums.id, albumId))
+
+    if (!album) {
+      throw new Error(`Album not found: ${albumId}`)
+    }
+
+    // Genuine LastFM art needs no catalog call; TIDAL contributes nothing.
+    if (!isMissingArtwork(album.imageUrl)) {
+      return { matched: false }
+    }
+
+    const artistName = await requireArtistName(db, album.artistId)
+
+    const coverArtUrl = await findTidalCoverArt(this.fetcher, {
+      name: album.name,
+      artistName,
     })
-    .where(eq(schema.albums.id, albumId))
+
+    if (!coverArtUrl) {
+      return { matched: false }
+    }
+
+    await db
+      .update(schema.albums)
+      .set({ imageUrl: coverArtUrl })
+      .where(eq(schema.albums.id, albumId))
+
+    return { matched: true }
+  }
 }
 
-export async function enrichAlbumWithTidal(
+function createDefaultSources(): EnrichmentSource[] {
+  return [
+    new LastfmEnrichmentSource(new LastfmAlbumInfoFetcher(env.LASTFM_API_KEY)),
+    new TidalEnrichmentSource({
+      searchAlbums: searchTidalAlbums,
+      getAlbum: getTidalAlbum,
+    }),
+  ]
+}
+
+// The single on-visit enrichment orchestrator. Runs each source in priority
+// order (LastFM first, then TIDAL), self-gating each on its own album_sources
+// row: a completed pass — match or no-match — is never re-run, while a source
+// that threw wrote no row and retries next visit. A transient failure stops the
+// ladder for this visit, since a lower rung reads what a higher rung wrote.
+export async function enrichAlbum(
   db: Database,
-  opts: { albumId: number; fetcher?: TidalCatalogFetcher }
+  opts: { albumId: number; sources?: EnrichmentSource[] }
 ): Promise<void> {
   const { albumId } = opts
-  const fetcher = opts.fetcher ?? createDefaultTidalFetcher()
+  const sources = opts.sources ?? createDefaultSources()
 
   const [album] = await db
-    .select({
-      tidalEnrichedAt: schema.albums.tidalEnrichedAt,
-      lastfmEnrichedAt: schema.albums.lastfmEnrichedAt,
-      name: schema.albums.name,
-      artistId: schema.albums.artistId,
-      imageUrl: schema.albums.imageUrl,
-    })
+    .select({ id: schema.albums.id })
     .from(schema.albums)
     .where(eq(schema.albums.id, albumId))
 
@@ -279,29 +326,29 @@ export async function enrichAlbumWithTidal(
     throw new Error(`Album not found: ${albumId}`)
   }
 
-  // This source's pass already completed — no-match is final, so never retried.
-  if (album.tidalEnrichedAt) {
-    return
+  const done = await db
+    .select({ source: schema.albumSources.source })
+    .from(schema.albumSources)
+    .where(eq(schema.albumSources.albumId, albumId))
+  const completed = new Set(done.map((r) => r.source))
+
+  for (const source of sources) {
+    if (completed.has(source.name)) continue
+
+    try {
+      const { matched } = await source.enrich(db, { albumId })
+      await db.insert(schema.albumSources).values({
+        albumId,
+        source: source.name,
+        enrichedAt: new Date(),
+        matched,
+      })
+    } catch (error) {
+      console.error(
+        `${source.name} album enrichment failed for albumId=${albumId}:`,
+        error
+      )
+      break
+    }
   }
-
-  // Precondition: TIDAL supplements rows LastFM creates, so it no-ops until the
-  // LastFM pass has run. A LastFM failure only defers TIDAL, never undoes it.
-  if (!album.lastfmEnrichedAt) {
-    return
-  }
-
-  // Genuine LastFM art needs no catalog call, so the artwork pass is complete.
-  if (!isMissingArtwork(album.imageUrl)) {
-    await writeTidalEnrichment(db, albumId)
-    return
-  }
-
-  const artistName = await requireArtistName(db, album.artistId)
-
-  const coverArtUrl = await findTidalCoverArt(fetcher, {
-    name: album.name,
-    artistName,
-  })
-
-  await writeTidalEnrichment(db, albumId, coverArtUrl)
 }

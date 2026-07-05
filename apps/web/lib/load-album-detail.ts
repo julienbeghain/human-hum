@@ -1,36 +1,18 @@
 import { notFound } from "next/navigation"
 
 import { db } from "@workspace/db"
-import { enrichAlbum, enrichAlbumWithTidal } from "@workspace/db/enrichment"
+import { enrichAlbum } from "@workspace/db/enrichment"
 import { getAlbumDetail } from "@workspace/db/queries"
 
 export async function loadAlbumDetail(albumId: number) {
-  let album = await getAlbumDetail(db, { albumId })
+  const existing = await getAlbumDetail(db, { albumId })
 
-  if (!album) notFound()
+  if (!existing) notFound()
 
-  // Two independent, self-gating passes — LastFM then TIDAL — each with its own
-  // try/catch so one source's failure degrades to existing data without
-  // touching the other.
-  if (!album.lastfmEnrichedAt) {
-    try {
-      await enrichAlbum(db, { albumId })
-      album = (await getAlbumDetail(db, { albumId }))!
-    } catch (error) {
-      console.error(`LastFM album enrichment failed for albumId=${albumId}:`, error)
-      return album
-    }
-  }
+  // The orchestrator runs the enrichment ladder and self-gates each source, so
+  // a fully-enriched album is a no-op. Re-read afterwards to surface whatever
+  // this visit's passes wrote.
+  await enrichAlbum(db, { albumId })
 
-  if (album.lastfmEnrichedAt && !album.tidalEnrichedAt) {
-    try {
-      await enrichAlbumWithTidal(db, { albumId })
-      album = (await getAlbumDetail(db, { albumId }))!
-    } catch (error) {
-      console.error(`TIDAL album enrichment failed for albumId=${albumId}:`, error)
-      return album
-    }
-  }
-
-  return album
+  return (await getAlbumDetail(db, { albumId }))!
 }

@@ -9,8 +9,9 @@ const MAX_ITERATIONS = 10;
 
 // Explicit image name so we don't depend on sandcastle's default derivation
 // (it varies by version — repo name on 0.5.x, dotfile-dir name on 0.8.x → an
-// invalid tag). Build it with:
-//   npx sandcastle docker build-image --image-name sandcastle:human-hum
+// invalid tag). Build it with (bare `npx sandcastle` from the repo root
+// resolves an unrelated npm package, so target .sandcastle's install):
+//   npm --prefix .sandcastle exec -- sandcastle docker build-image --image-name sandcastle:human-hum
 const IMAGE = "sandcastle:human-hum";
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {

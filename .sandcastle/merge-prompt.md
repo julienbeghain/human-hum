@@ -9,7 +9,7 @@ Merge the following branches into the current branch:
 For each branch:
 1. `git merge --no-edit <branch>`
 2. If conflicts arise, resolve them sensibly
-3. Run `pnpm typecheck && pnpm lint` to verify
+3. Run `pnpm typecheck && pnpm lint && pnpm test` to verify
 4. If checks fail, fix the issues and commit
 
 # Record the result, then close

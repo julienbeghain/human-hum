@@ -28,7 +28,7 @@ Follow Red-Green-Refactor:
 
 Before committing, run:
 ```
-pnpm typecheck && pnpm lint
+pnpm typecheck && pnpm lint && pnpm test
 ```
 
 # Commits

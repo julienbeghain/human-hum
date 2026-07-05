@@ -56,3 +56,7 @@ docs/research/
 
 # Graphify (knowledge-graph tooling output — regenerable, not synced)
 graphify-out/
+
+# pnpm store created by sandcastle containers (cross-device fallback from the
+# bind-mounted repo; a cache — safe to delete, speeds up container installs)
+.pnpm-store/

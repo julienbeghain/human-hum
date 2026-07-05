@@ -9,7 +9,10 @@ Merge the following branches into the current branch:
 For each branch:
 1. `git merge --no-edit <branch>`
 2. If conflicts arise, resolve them sensibly
-3. Run `pnpm typecheck && pnpm lint && pnpm test` to verify
+3. Run `pnpm typecheck && pnpm lint` to verify. Do NOT run `pnpm test` or `pnpm install` here:
+   this sandbox bind-mounts the host repo root, and an install swaps the host's native binaries
+   for Linux ones (vitest needs them; tsc/eslint don't). Tests already gated in the isolated
+   implement/review worktrees, and CI re-runs them on push.
 4. If checks fail, fix the issues and commit
 
 # Record the result, then close

@@ -96,6 +96,15 @@ authoritative over the reprovisionable catalog source inverts the durability we 
 - `apps/web/lib/load-album-detail.ts` flips from LastFM-first to TIDAL-first; the LastFM
   `album.getInfo` pass moves from *driver* to *floor fallback*.
 - Adding a source later (Deezer/Apple Music) is additive: an enum value and a matcher — completion is just
-  new `album_sources` rows, no schema change — then a reseed regenerates enrichment through the new ladder.
+  new `album_sources` rows, no schema change — the new rung then enriches lazily on each album's next visit.
 - LastFM remains the primary *hum* source; this ADR only changes its *enrichment* role. Hum source vs
   enrichment source stay distinct roles (CONTEXT.md).
+
+## Note (2026-07-05)
+
+An earlier revision said "a reseed regenerates enrichment through the new ladder" — that overstated the
+mechanism. `reseed` only replays hums; enrichment regenerates **lazily on album-detail visit**, each rung
+self-gated by its `album_sources` row. Adding a source therefore needs no reseed at all — the new rung has
+no completion row, so it runs on next visit. When an existing rung's *meaning* changes (the TIDAL-primary
+flip: pre-pivot `tidal_enriched_at` recorded the supplemental artwork pass, not tracklist ownership), the
+migration shipping the change clears that source's stale `album_sources` rows so the lazy pass re-runs.
